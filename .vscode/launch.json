@@ -1,0 +1,41 @@
+{
+  // Cómo lanzar ALERTIC desde VS Code (F5 o el botón «Run»).
+  //
+  // La app siempre habla con el servidor. Sin `ALERTIC_API` usa 10.0.2.2:3000 en
+  // el emulador de Android y localhost:3000 en web y Windows; un celular real
+  // necesita su dirección: elige la configuración que corresponda.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "ALERTIC · emulador de Android (servidor real)",
+      "request": "launch",
+      "type": "dart",
+      "args": ["--dart-define=ALERTIC_API=http://10.0.2.2:3000"]
+    },
+    {
+      "name": "ALERTIC · celular por USB (servidor real)",
+      // Antes, en una terminal:  adb reverse tcp:3000 tcp:3000
+      "request": "launch",
+      "type": "dart",
+      "args": ["--dart-define=ALERTIC_API=http://localhost:3000"]
+    },
+    {
+      "name": "ALERTIC · celular por wifi (servidor real)",
+      // Cambia la IP por la de tu PC en el wifi (ipconfig).
+      "request": "launch",
+      "type": "dart",
+      "args": ["--dart-define=ALERTIC_API=http://192.168.1.4:3000"]
+    },
+    {
+      "name": "Panel del colegio · navegador (servidor real)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/panel_main.dart",
+      "deviceId": "chrome",
+      "args": [
+        "--web-port=5173",
+        "--dart-define=ALERTIC_API=http://localhost:3000"
+      ]
+    }
+  ]
+}

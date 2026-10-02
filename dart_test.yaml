@@ -1,0 +1,5 @@
+# Las pruebas de integración necesitan la API corriendo. Se saltan solas si no
+# está, así que se pueden dejar en la corrida normal.
+tags:
+  integracion:
+    skip: false

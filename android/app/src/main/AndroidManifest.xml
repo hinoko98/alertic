@@ -1,0 +1,102 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      Permisos de las notificaciones de emergencia.
+
+      POST_NOTIFICATIONS   Android 13 y siguientes exigen que la persona lo
+                           conceda. Sin él no aparece ningún aviso.
+      USE_FULL_SCREEN_INTENT  Es lo que deja que la alerta roja tome la pantalla
+                           de un celular bloqueado, como una llamada entrante.
+                           Android 14 lo restringió a apps de alarma y
+                           emergencia; esta califica, y hay que declararlo así
+                           en la ficha de Play Store.
+      VIBRATE              Para que se sienta con el celular en el bolsillo en un
+                           salón con ruido.
+      ACCESS_NOTIFICATION_POLICY  Permite que el canal rojo suene en «No
+                           molestar». La persona tiene que autorizarlo aparte en
+                           los ajustes; si no lo hace, Android lo ignora sin
+                           error y el aviso llega igual, más silencioso.
+      RECEIVE_BOOT_COMPLETED  Para que los canales sigan existiendo después de
+                           reiniciar el celular.
+      INTERNET             Sin él, la app no puede hablar con el servidor del
+                           colegio. Flutter lo declara solo en los manifiestos de
+                           debug y profile (para el hot reload), así que un APK
+                           de release sin esta línea instala bien y no conecta a
+                           nada: ni alertas, ni reportes, ni inicio de sesión.
+    -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
+    <application
+        android:label="alertic"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true">
+            <!-- Specifies an Android theme to apply to this Activity as soon as
+                 the Android process has started. This theme is visible to the user
+                 while the Flutter UI initializes. After that, this theme continues
+                 to determine the Window background behind the Flutter UI. -->
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <!-- Don't delete the meta-data below.
+             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+
+        <!--
+          Canal al que Firebase manda un aviso si alguna vez llegara uno sin
+          canal declarado. Apunta al más grave a propósito: más vale que suene de
+          más una vez que quedarse callado en una evacuación.
+        -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="alertic_roja_v1" />
+
+        <!--
+          Vuelve a crear los canales después de reiniciar el celular. Sin esto,
+          un teléfono que se reinició de noche llega al día siguiente sin el
+          canal de la alerta roja.
+        -->
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+    </application>
+    <!-- Required to query activities that can process text, see:
+         https://developer.android.com/training/package-visibility and
+         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
+
+         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
+</manifest>
