@@ -9,8 +9,8 @@
 /// flutter run --dart-define=ALERTIC_API=http://192.168.1.10:3000
 /// ```
 ///
-/// Sin ella se usa `localhost:3000`, que en Android funciona con el túnel USB
-/// (`adb reverse tcp:3000 tcp:3000`) tanto en un celular real como en el
+/// Sin ella se usa `localhost:3001`, que en Android funciona con el túnel USB
+/// (`adb reverse tcp:3001 tcp:3001`) tanto en un celular real como en el
 /// emulador, y directamente en el navegador y Windows. Para llegar por wifi se
 /// pasa la IP del computador: ver el README.
 abstract final class AppConfig {
@@ -21,7 +21,7 @@ abstract final class AppConfig {
     if (_configured.isNotEmpty) {
       return _configured;
     }
-    return 'http://localhost:3000';
+    return 'http://localhost:3001';
   }
 
   /// La API solo debe viajar por HTTPS fuera de la red del colegio.

@@ -28,7 +28,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   const String baseUrl = String.fromEnvironment(
     'ALERTIC_API',
-    defaultValue: 'http://localhost:3000',
+    defaultValue: 'http://localhost:3001',
   );
 
   bool serverUp = false;

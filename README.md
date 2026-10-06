@@ -14,15 +14,15 @@ las otras dos.
 cd ../alerticapi
 npm install            # solo la primera vez
 npm run admin:create -- correo@colegio.edu.co "Nombre Apellido"   # solo la primera vez
-npm start              # http://localhost:3000
+npm start              # http://localhost:3001
 ```
 
 **2 · La app del celular**
 
 ```bash
 cd alertic
-flutter run --dart-define=ALERTIC_API=http://10.0.2.2:3000     # emulador de Android
-flutter run --dart-define=ALERTIC_API=http://192.168.1.4:3000  # celular real (IP de tu PC)
+flutter run --dart-define=ALERTIC_API=http://10.0.2.2:3001     # emulador de Android
+flutter run --dart-define=ALERTIC_API=http://192.168.1.4:3001  # celular real (IP de tu PC)
 ```
 
 `10.0.2.2` es el computador visto desde el emulador. Con un celular real es otra
@@ -31,7 +31,7 @@ cosa: ver **[Probar en tu celular](#probar-en-tu-celular)**, abajo.
 **3 · El panel del colegio** (computador de coordinación)
 
 ```bash
-flutter run -d windows -t lib/panel_main.dart --dart-define=ALERTIC_API=http://localhost:3000
+flutter run -d windows -t lib/panel_main.dart --dart-define=ALERTIC_API=http://localhost:3001
 ```
 
 Pide iniciar sesión y solo deja pasar a coordinación. En este equipo falta el
@@ -39,14 +39,14 @@ componente «Desarrollo para escritorio con C++» de Visual Studio, así que mie
 tanto sirve el mismo código en el navegador (el servidor permite el puerto 5173):
 
 ```bash
-flutter run -d chrome --web-port 5173 -t lib/panel_main.dart --dart-define=ALERTIC_API=http://localhost:3000
+flutter run -d chrome --web-port 5173 -t lib/panel_main.dart --dart-define=ALERTIC_API=http://localhost:3001
 ```
 
 ### La app siempre habla con el servidor
 
 **No hay datos de prueba ni modo demostración.** Lo que se ve es lo que hay en la
 base de datos, aunque esté vacía. Sin `--dart-define=ALERTIC_API=...` la app usa
-`http://localhost:3000` (en Android hace falta `adb reverse tcp:3000 tcp:3000`, también en el emulador) en web y
+`http://localhost:3001` (en Android hace falta `adb reverse tcp:3001 tcp:3001`, también en el emulador) en web y
 Windows; un celular real necesita su dirección (ver *Probar en tu celular*). En
 VS Code, `.vscode/launch.json` trae las configuraciones con la dirección puesta.
 
@@ -54,8 +54,8 @@ La pantalla de bienvenida y la de inicio de sesión dicen si el servidor respond
 
 | Línea | Qué significa |
 |---|---|
-| 🟢 `Conectado · 10.0.2.2:3000` | El servidor respondió. |
-| 🔴 `Sin conexión con 10.0.2.2:3000. Toca para reintentar.` | No respondió: API apagada, IP equivocada o cortafuegos. |
+| 🟢 `Conectado · 10.0.2.2:3001` | El servidor respondió. |
+| 🔴 `Sin conexión con 10.0.2.2:3001. Toca para reintentar.` | No respondió: API apagada, IP equivocada o cortafuegos. |
 
 ### Primer día: un colegio vacío
 
@@ -139,15 +139,15 @@ computador**. Hay tres formas de decírselo, de la más fácil a la más lejana.
 3. Hazle ver la API del computador **como si fuera suya**:
 
    ```bash
-   adb reverse tcp:3000 tcp:3000
+   adb reverse tcp:3001 tcp:3001
    ```
 
-   Desde el celular, `localhost:3000` pasa a ser la API de tu computador. Hay que
+   Desde el celular, `localhost:3001` pasa a ser la API de tu computador. Hay que
    repetirlo cada vez que desconectes y vuelvas a conectar el cable.
 4. Con la API corriendo (`cd ../alerticapi && npm start`):
 
    ```bash
-   flutter run --dart-define=ALERTIC_API=http://localhost:3000
+   flutter run --dart-define=ALERTIC_API=http://localhost:3001
    ```
 
 ### B · Por wifi, sin cable
@@ -160,13 +160,13 @@ El celular y el computador tienen que estar **en el mismo wifi**.
    PowerShell de administrador:
 
    ```powershell
-   New-NetFirewallRule -DisplayName "ALERTIC API" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow -Profile Private
+   New-NetFirewallRule -DisplayName "ALERTIC API" -Direction Inbound -Protocol TCP -LocalPort 3001 -Action Allow -Profile Private
    ```
 
 3. Compruébalo **antes de abrir la app**: en el navegador del celular abre
-   `http://192.168.1.4:3000/health`. Si responde `{"ok":true,...}`, la app también
+   `http://192.168.1.4:3001/health`. Si responde `{"ok":true,...}`, la app también
    llegará. Si no, el problema es de red y no de ALERTIC.
-4. `flutter run --dart-define=ALERTIC_API=http://192.168.1.4:3000`
+4. `flutter run --dart-define=ALERTIC_API=http://192.168.1.4:3001`
 
 **Si no llega**: un wifi de colegio, de universidad o de un café suele tener
 «aislamiento de clientes» y no deja que un dispositivo vea a otro. Usa la
@@ -175,7 +175,7 @@ opción A o tu propio celular como punto de acceso.
 ### Instalar el APK, sin cable ni `flutter run`
 
 ```bash
-flutter build apk --release --dart-define=ALERTIC_API=http://192.168.1.4:3000
+flutter build apk --release --dart-define=ALERTIC_API=http://192.168.1.4:3001
 ```
 
 Queda en `build/app/outputs/flutter-apk/app-release.apk`. Pásalo al celular (por
@@ -207,7 +207,7 @@ real**; el emulador no los reproduce. Ver [FIREBASE.md](FIREBASE.md).
 Los celulares de otras personas no están en tu wifi. Para eso la API tiene que
 estar en internet con HTTPS: ver **[Publicarlo](../alerticapi/README.md#publicarlo)**
 en el README de la API. Para una demostración sin desplegar nada, un túnel
-(`cloudflared tunnel --url http://localhost:3000`) te da una dirección `https://`
+(`cloudflared tunnel --url http://localhost:3001`) te da una dirección `https://`
 temporal que apunta a tu computador; esa dirección es el valor de
 `ALERTIC_API`. *No lo he probado en este equipo.*
 

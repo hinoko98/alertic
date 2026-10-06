@@ -34,7 +34,7 @@ import 'features/teacher/data/api_teacher_repository.dart';
 ///
 ///   flutter run -d windows -t lib/panel_main.dart
 ///
-/// Sin `--dart-define=ALERTIC_API=...` usa `http://localhost:3000`.
+/// Sin `--dart-define=ALERTIC_API=...` usa `http://localhost:3001`.
 ///
 /// Es otra app, no otra pantalla de la app móvil: corre en el computador de
 /// coordinación y responde otra pregunta. Comparte el mismo proyecto para no
