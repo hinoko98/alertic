@@ -46,7 +46,7 @@ flutter run -d chrome --web-port 5173 -t lib/panel_main.dart --dart-define=ALERT
 
 **No hay datos de prueba ni modo demostración.** Lo que se ve es lo que hay en la
 base de datos, aunque esté vacía. Sin `--dart-define=ALERTIC_API=...` la app usa
-`http://10.0.2.2:3000` en el emulador de Android y `http://localhost:3000` en web y
+`http://localhost:3000` (en Android hace falta `adb reverse tcp:3000 tcp:3000`, también en el emulador) en web y
 Windows; un celular real necesita su dirección (ver *Probar en tu celular*). En
 VS Code, `.vscode/launch.json` trae las configuraciones con la dirección puesta.
 
@@ -333,6 +333,36 @@ sesión ante un 401, y `FLAG_SECURE` en las pantallas con datos de menores.
 Cómo levantarlo, con y sin servidor, y las cuentas de prueba: ver **[Levantar
 todo](#levantar-todo)** arriba.
 
+## Mapa y ruta en vivo (pantallas 08 y 09)
+
+El estudiante ve dónde está y hacia dónde ir, en vivo:
+
+- **Mapa de evacuación.** Punto azul con el margen de error del GPS (`GPS ±6 m`), el
+  punto de encuentro, la ruta que falta, la distancia y el tiempo caminando. Puede
+  escoger otro punto del colegio; el asignado sale como «Recomendado».
+- **Ruta guiada.** Una flecha que apunta hacia dónde ir, los metros restantes, la barra
+  de avance, el tramo ya recorrido en gris, y los pasos que escribió el colegio. A menos
+  de 15 m del punto, la app da por llegada a la persona y pasa a la confirmación.
+  Incluye «Ruta bloqueada» y «Necesito ayuda».
+
+**Qué es y qué no es el mapa.** Es un plano de coordenadas reales con escala y norte,
+dibujado por la app: **no trae calles ni edificios inventados** y funciona sin internet
+(el GPS no necesita datos). Si el colegio quiere un plano con bloques, se agrega después
+con el plano verdadero.
+
+**Cómo se ubica un punto de encuentro.** En el panel: Protocolos → punto de encuentro →
+«Usar mi ubicación actual», parado en el punto. Mientras un punto no tenga coordenadas, la
+app dice que no está ubicado y deja solo las indicaciones escritas (no inventa una ruta).
+
+**Privacidad.** La ubicación se lee **solo mientras la pantalla del mapa o de la ruta está
+abierta** y se apaga al salir. Se queda en el celular: la app no envía la posición del
+estudiante al servidor. Permiso: `ACCESS_FINE_LOCATION` (Android) y
+`NSLocationWhenInUseUsageDescription` (iOS), «mientras se usa la app».
+
+Código: `core/location/` (`geo.dart`, `location_service.dart`, `location_tracker.dart`) y
+`features/student/presentation/widgets/live_route_map.dart`. En las pruebas se mueve a la
+persona con `FakeLocationService`.
+
 ## Reportes de emergencia y tiempo real
 
 ### Un estudiante ve humo y lo avisa
@@ -534,6 +564,24 @@ que llegue sin mostrar la alerta dos veces.
 Sin nada de red, lo que ya está hecho: protocolos, plano y punto de encuentro
 quedan guardados en el celular y se leen sin señal.
 
+## Diseño y estructura (v2)
+
+La app sigue las pantallas de `ALERTIC_Pantallas.V2.pdf`: tarjetas redondeadas, color
+de marca carmesí, insignias (`Pill`), y un encabezado con el chat y «Ayuda». Los
+componentes viven en `lib/shared/design/` (`AppPage`, `AppCard`, `Pill`, `IconBubble`,
+`StatusBanner`, `SectionLabel`, `AppBottomNav`).
+
+| Rol | Pestañas |
+|---|---|
+| Estudiante | Inicio · Mapa · Guías · Reportar · Perfil (el chat con el colegio y «Ayuda» están en el encabezado) |
+| Docente | Inicio · Guías · Reportar · Mensajes · Cuenta |
+| Acudiente | Inicio · Guías · Reportar · Perfil (el chat está en el encabezado) |
+| Coordinación | Emergencia · Comunidad · Mensajes · Más · Cuenta (en «Más»: Simulacros, Reportes de riesgo, Historial, Protocolos) |
+
+**Chat.** Estudiante y acudiente escriben al colegio; lo atiende su director de grupo o
+coordinación (`features/support`). Los avisos llegan en vivo (`LiveChange.chat`) y por
+push sin el texto del mensaje.
+
 ## Pruebas
 
 ```bash
@@ -547,7 +595,7 @@ corriendo, **se saltan** en vez de fallar. Si un código de registro ya se quem�
 (son de un solo uso), también se saltan: vuelve a sembrar la base de pruebas con `DATABASE_FILE=./data/demo.db npm run seed:demo`.
 
 El servidor tiene las suyas, con una base de datos en memoria que no toca tus
-datos: `cd ../alerticapi && npm test` (108 pruebas).
+datos: `cd ../alerticapi && npm test` (172 pruebas).
 
 **Sin código QR.** Se decidió no implementarlo. Se quitó el escáner del registro,
 el botón de imprimir carnés del panel, y el QR dibujado de la pantalla de entrega

@@ -21,7 +21,6 @@ Future<void> confirmEndAlert(BuildContext context, Alert alert) async {
   final bool? confirmed = await showDialog<bool>(
     context: context,
     builder: (BuildContext context) => AlertDialog(
-      shape: const RoundedRectangleBorder(),
       title: Text('¿Finalizar la alerta ${alert.level.label.toLowerCase()}?'),
       content: Text(
         alert.level == AlertLevel.roja

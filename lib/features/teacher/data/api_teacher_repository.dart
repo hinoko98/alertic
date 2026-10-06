@@ -29,6 +29,8 @@ class ApiTeacherRepository implements TeacherRepository {
         if (draft.meetingPoint != null && draft.meetingPoint!.isNotEmpty)
           'meetingPoint': draft.meetingPoint,
         if (draft.incidentId != null) 'incidentId': draft.incidentId,
+        if (draft.drill) 'drill': true,
+        if (draft.drillId != null) 'drillId': draft.drillId,
       },
     );
 

@@ -62,6 +62,9 @@ class ApiAlertRepository implements AlertRepository {
         if (point != null) 'latitude': point.latitude,
         if (point != null) 'longitude': point.longitude,
         if (point != null) 'accuracyMeters': point.accuracyMeters,
+        if (report.helpKind != null) 'helpKind': report.helpKind!.wire,
+        if (report.helpDetails != null && report.helpDetails!.trim().isNotEmpty)
+          'helpDetails': report.helpDetails!.trim(),
       },
     );
   }
@@ -124,6 +127,8 @@ class ApiAlertRepository implements AlertRepository {
             distanceMeters: (item['distanceMeters'] as num?)?.toInt() ?? 0,
             walkMinutes: (item['walkMinutes'] as num?)?.toInt() ?? 0,
             onlyFor: Hazard.tryParse(item['onlyFor'] as String?),
+            latitude: (item['latitude'] as num?)?.toDouble(),
+            longitude: (item['longitude'] as num?)?.toDouble(),
           ),
     ];
   }

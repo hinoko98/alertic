@@ -12,7 +12,7 @@ void main() {
     });
 
     test('un código con formato raro se oculta completo', () {
-      expect(Redact.code('7K4P2Q9M'), '••••');
+      expect(Redact.code('IICB7K4P'), '••••');
       expect(Redact.code(null), '••••');
     });
 

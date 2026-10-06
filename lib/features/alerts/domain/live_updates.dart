@@ -20,6 +20,16 @@ enum LiveChange {
   /// y coordinación; vuelven a pedir la bandeja, donde el servidor les da solo
   /// lo que les corresponde.
   incidents,
+
+  /// Hay un mensaje nuevo, o cambió quién atiende, en una conversación de
+  /// soporte de la que esta persona es parte.
+  chat,
+
+  /// Llegó o cambió un reporte de riesgo. Lo reciben docentes y coordinación.
+  riskReports,
+
+  /// Cambió el estado de un reporte de riesgo que hizo esta persona.
+  myRiskReport,
 }
 
 /// Cambios en vivo, venga de donde venga.

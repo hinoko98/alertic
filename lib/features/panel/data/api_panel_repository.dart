@@ -52,6 +52,9 @@ class ApiPanelRepository implements PanelRepository {
           reportedAt:
               DateTime.tryParse(item['reportedAt'] as String? ?? '')?.toLocal() ??
                   DateTime.now(),
+          helpKind: item['helpKind'] as String?,
+          helpDetails: item['helpDetails'] as String?,
+          medicalInfo: item['medicalInfo'] as String?,
         ),
       ),
       byMeetingPoint: _list(

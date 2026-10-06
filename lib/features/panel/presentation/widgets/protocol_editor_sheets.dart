@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/app_scope.dart';
 import '../../../../core/errors/error_reporter.dart';
+import '../../../../core/location/location_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/widgets/secondary_button.dart';
 import '../../../alerts/domain/hazard.dart';
 import '../../../alerts/domain/meeting_point.dart';
 import '../../../alerts/domain/protocol.dart';
@@ -247,9 +249,16 @@ class _MeetingPointEditorState extends State<_MeetingPointEditor> {
   late final TextEditingController _minutes = TextEditingController(
     text: (widget.point?.walkMinutes ?? 0) > 0 ? '${widget.point!.walkMinutes}' : '',
   );
+  late final TextEditingController _latitude = TextEditingController(
+    text: widget.point?.latitude?.toString() ?? '',
+  );
+  late final TextEditingController _longitude = TextEditingController(
+    text: widget.point?.longitude?.toString() ?? '',
+  );
   late Hazard? _onlyFor = widget.point?.onlyFor;
 
   bool _busy = false;
+  bool _locating = false;
   String? _error;
 
   @override
@@ -258,6 +267,8 @@ class _MeetingPointEditorState extends State<_MeetingPointEditor> {
     _route.dispose();
     _distance.dispose();
     _minutes.dispose();
+    _latitude.dispose();
+    _longitude.dispose();
     super.dispose();
   }
 
@@ -267,6 +278,50 @@ class _MeetingPointEditorState extends State<_MeetingPointEditor> {
     final String text = controller.text.trim();
     if (text.isEmpty) return 0;
     return int.tryParse(text);
+  }
+
+  /// Toma la ubicación del celular: coordinación se para en el punto de encuentro y
+  /// toca el botón. Es más fiable que escribir coordenadas a mano.
+  Future<void> _useMyLocation() async {
+    if (_locating) return;
+    setState(() {
+      _locating = true;
+      _error = null;
+    });
+    final LocationService service = AppScope.of(context).locationService;
+
+    try {
+      final LocationAccess access = await service.ensureAccess();
+      if (access != LocationAccess.granted) {
+        if (mounted) {
+          setState(() => _error = switch (access) {
+                LocationAccess.serviceOff => 'Enciende el GPS del celular.',
+                LocationAccess.unsupported => 'Este dispositivo no tiene ubicación.',
+                _ => 'Permite la ubicación para tomar las coordenadas.',
+              });
+        }
+        return;
+      }
+      final LocationFix? fix = await service.current();
+      if (!mounted) return;
+      if (fix == null) {
+        setState(() => _error = 'No pudimos ubicarte. Sal al aire libre e inténtalo otra vez.');
+        return;
+      }
+      setState(() {
+        _latitude.text = fix.point.latitude.toStringAsFixed(6);
+        _longitude.text = fix.point.longitude.toStringAsFixed(6);
+        if (fix.accuracy > 25) {
+          _error = 'La señal tiene ±${fix.accuracy.round()} m de error: espera unos segundos '
+              'y vuelve a tomarla para que sea más exacta.';
+        }
+      });
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'ubicación del punto');
+      if (mounted) setState(() => _error = 'No pudimos tomar la ubicación.');
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
   }
 
   Future<void> _run(Future<void> Function(PanelRepository repository) action) async {
@@ -313,12 +368,33 @@ class _MeetingPointEditorState extends State<_MeetingPointEditor> {
       return;
     }
 
+    // Las coordenadas van juntas o ninguna: una sola no ubica nada.
+    final String latText = _latitude.text.trim().replaceAll(',', '.');
+    final String lonText = _longitude.text.trim().replaceAll(',', '.');
+    double? latitude;
+    double? longitude;
+    if (latText.isNotEmpty || lonText.isNotEmpty) {
+      latitude = double.tryParse(latText);
+      longitude = double.tryParse(lonText);
+      if (latitude == null ||
+          longitude == null ||
+          latitude < -90 ||
+          latitude > 90 ||
+          longitude < -180 ||
+          longitude > 180) {
+        setState(() => _error = 'La latitud y la longitud son números, o déjalas vacías.');
+        return;
+      }
+    }
+
     final MeetingPointDraft draft = MeetingPointDraft(
       name: name,
       routeHint: route,
       distanceMeters: distance,
       walkMinutes: minutes,
       onlyFor: _onlyFor,
+      latitude: latitude,
+      longitude: longitude,
     );
     final MeetingPoint? existing = widget.point;
 
@@ -404,6 +480,30 @@ class _MeetingPointEditorState extends State<_MeetingPointEditor> {
                   controller: _minutes,
                   keyboardType: TextInputType.number,
                   maxLength: 3,
+                ),
+                const FormSection(
+                  'Ubicación en el mapa',
+                  hint: 'Párate en el punto de encuentro y toma tu ubicación: con ella la app '
+                      'guía a cada estudiante en vivo. Sin ella solo ve las indicaciones '
+                      'escritas.',
+                ),
+                SecondaryButton(
+                  key: const Key('usar-mi-ubicacion'),
+                  label: _locating ? 'Buscando…' : 'Usar mi ubicación actual',
+                  onPressed: _locating ? null : _useMyLocation,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                AdminTextField(
+                  label: 'Latitud (opcional)',
+                  controller: _latitude,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                  maxLength: 12,
+                ),
+                AdminTextField(
+                  label: 'Longitud (opcional)',
+                  controller: _longitude,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                  maxLength: 12,
                 ),
                 const FormSection(
                   'Para qué amenaza',

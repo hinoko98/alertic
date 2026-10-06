@@ -62,6 +62,9 @@ class ApiLiveUpdates implements LiveUpdates {
             'hijo_reporto' => LiveChange.myChildren,
             'aviso_externo' => LiveChange.hazardSignals,
             'incidente' => LiveChange.incidents,
+            'chat' => LiveChange.chat,
+            'riesgo' => LiveChange.riskReports,
+            'mi_reporte' => LiveChange.myRiskReport,
             _ => null,
           })
       .where((LiveChange? change) => change != null)

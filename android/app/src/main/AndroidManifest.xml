@@ -24,6 +24,9 @@
                            nada: ni alertas, ni reportes, ni inicio de sesión.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Ubicación: solo mientras la app está abierta, para guiar la evacuación. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
@@ -97,6 +100,11 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Para el botón «Llamar» a la Línea 123 del asistente de riesgos. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="tel"/>
         </intent>
     </queries>
 </manifest>

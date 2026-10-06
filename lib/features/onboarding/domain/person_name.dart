@@ -26,6 +26,12 @@ abstract final class PersonName {
     return '${parts.first} ${_firstSurname(parts)}';
   }
 
+  /// Solo el primer nombre: `Laura`. Es como se saluda: «Hola, Laura».
+  static String firstName(String fullName) {
+    final List<String> parts = _parts(fullName);
+    return parts.isEmpty ? '' : parts.first;
+  }
+
   /// Iniciales para un avatar: `LP`.
   static String initials(String fullName) {
     final List<String> parts = _parts(fullName);

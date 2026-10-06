@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
+import '../../../shared/design/app_page.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../domain/incident.dart';
@@ -19,36 +19,21 @@ class IncidentsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.ink),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.screenGutter,
-            0,
-            AppSpacing.screenGutter,
-            AppSpacing.xl,
+    return AppPage(
+      title: 'REPORTES',
+      subtitle: 'Lo que la comunidad avisa de tus grupos',
+      onBack: () => Navigator.of(context).pop(),
+      showHelp: false,
+      body: ListView(
+        padding: const EdgeInsets.all(AppSpacing.screenGutter),
+        children: <Widget>[
+          const Text(
+            'Tú decides si hay que ir, descartarlo o emitir una alerta.',
+            style: AppTextStyles.caption,
           ),
-          children: <Widget>[
-            const Text('REPORTES', style: AppTextStyles.screenTitle),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Lo que la comunidad avisa de tus grupos. Tú decides si hay que ir, '
-              'descartarlo o emitir una alerta.',
-              style: AppTextStyles.caption,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            IncidentInbox(onEscalate: onEscalate),
-          ],
-        ),
+          const SizedBox(height: AppSpacing.lg),
+          IncidentInbox(onEscalate: onEscalate),
+        ],
       ),
     );
   }

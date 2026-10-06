@@ -6,7 +6,6 @@ import '../../../../app/app_scope.dart';
 import '../../../../core/errors/error_reporter.dart';
 import '../../../onboarding/domain/enrollment.dart';
 import '../../../session/domain/session.dart';
-import '../../../student/presentation/screens/safety_check_in_screen.dart';
 import '../../domain/alert.dart';
 import '../../domain/safety_report.dart';
 import '../screens/alert_screen.dart';
@@ -43,9 +42,6 @@ class _AlertGateState extends State<AlertGate> {
   /// llega una alerta nueva mientras la anterior seguía en pantalla, la nueva
   /// tiene que verse.
   String? _handledId;
-
-  /// Cuando la alerta exige responder, se pasa al reporte de estado.
-  SafetyStatus? _respondingWith;
 
   @override
   void didChangeDependencies() {
@@ -109,30 +105,17 @@ class _AlertGateState extends State<AlertGate> {
       return widget.child;
     }
 
-    final SafetyStatus? responding = _respondingWith;
     final Enrollment profile = widget.session.profile;
 
-    // El reporte de estado solo aplica al estudiante. Los demás roles tienen su
-    // propio flujo en los bloques D y E.
-    if (responding != null && profile is StudentEnrollment) {
-      return SafetyCheckInScreen(
-        alert: alert,
-        student: profile,
-        initialStatus: responding,
-        onSent: () => setState(() {
-          _handledId = alert.id;
-          _respondingWith = null;
-        }),
-      );
-    }
-
+    // El estudiante responde con sus propias pantallas (ruta, «a salvo», «ayuda»)
+    // y, cuando una queda registrada, la alerta deja de pedirle que responda. Los
+    // demás roles solo dan por leída la alerta.
     return AlertScreen(
       alert: alert,
+      student: profile is StudentEnrollment ? profile : null,
+      onResponded: () => setState(() => _handledId = alert.id),
       onAcknowledge: () => _acknowledge(alert),
-      onRespond: profile is StudentEnrollment
-          ? (SafetyStatus status) =>
-              setState(() => _respondingWith = status)
-          : (SafetyStatus _) => _acknowledge(alert),
+      onRespond: (SafetyStatus _) => _acknowledge(alert),
     );
   }
 }

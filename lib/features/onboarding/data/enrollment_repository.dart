@@ -1,5 +1,6 @@
 import '../../session/domain/session.dart';
 import '../domain/enrollment.dart';
+import '../domain/school.dart';
 import '../domain/personal_code.dart';
 
 /// Acceso a la matrícula que cargó el colegio.
@@ -8,6 +9,12 @@ import '../domain/personal_code.dart';
 /// backend, se implementa esta misma interfaz contra la API y no cambia nada
 /// de la interfaz de usuario.
 abstract interface class EnrollmentRepository {
+  /// El colegio al que apunta el código que escribió la persona (los cuatro
+  /// primeros caracteres del carné).
+  ///
+  /// Lanza [SchoolNotFound] si no existe.
+  Future<School> findSchool(String schoolCode);
+
   /// Busca el perfil al que apunta el código.
   ///
   /// Lanza un [EnrollmentFailure] si el código no existe, ya se usó o no se

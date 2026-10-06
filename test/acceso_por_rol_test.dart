@@ -8,6 +8,8 @@ import 'package:alertic/features/onboarding/domain/enrollment.dart';
 import 'package:alertic/features/onboarding/domain/enrollment_failure.dart';
 import 'package:alertic/features/onboarding/domain/personal_code.dart';
 import 'support/fakes/fake_panel_repository.dart';
+import 'support/fakes/fake_risk_repository.dart';
+import 'package:alertic/features/risks/domain/risk_repository.dart';
 import 'package:alertic/features/session/domain/session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,7 +39,7 @@ void main() {
     addTearDown(tester.view.reset);
   }
 
-  Future<void> pumpApp(WidgetTester tester) async {
+  Future<void> pumpApp(WidgetTester tester, {FakeRiskRepository? risks}) async {
     useAPhoneScreen(tester);
     await tester.pumpWidget(
       testApp(
@@ -47,14 +49,15 @@ void main() {
         alertRepository: alerts,
         guardianRepository: FakeGuardianRepository(latency: Duration.zero),
         panelRepository: FakePanelRepository(alerts),
+        riskRepository: risks,
       ),
     );
     await tester.pumpAndSettle();
   }
 
-  Future<void> openSignIn(WidgetTester tester) async {
-    await pumpApp(tester);
-    await tester.tap(find.text('YA TENGO CUENTA'));
+  Future<void> openSignIn(WidgetTester tester, {FakeRiskRepository? risks}) async {
+    await pumpApp(tester, risks: risks);
+    await tester.tap(find.text('Ya tengo cuenta'));
     await tester.pumpAndSettle();
   }
 
@@ -67,7 +70,7 @@ void main() {
     await tester.enterText(fields.first, email);
     await tester.enterText(fields.last, password);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('ENTRAR'));
+    await tester.tap(find.text('Entrar'));
     await tester.pumpAndSettle();
   }
 
@@ -94,7 +97,7 @@ void main() {
       // bastaría con una foto de su viejo carné para emitir una alerta.
       await expectLater(
         FakeEnrollmentRepository(latency: Duration.zero).findByCode(
-          PersonalCode.tryParse('4F7H2WPD')!,
+          PersonalCode.tryParse('IICB4F7H')!,
         ),
         throwsA(isA<CodeNotFound>()),
       );
@@ -113,7 +116,7 @@ void main() {
 
       final Enrollment student = await FakeEnrollmentRepository(
         latency: Duration.zero,
-      ).findByCode(PersonalCode.tryParse('7K4P2Q9M')!);
+      ).findByCode(PersonalCode.tryParse('IICB7K4P')!);
       expect(student, isA<CodeEnrollment>());
     });
   });
@@ -129,8 +132,12 @@ void main() {
         'Contabilidad2026',
       );
 
-      await tester.tap(find.text('ACTIVAR Y ENTRAR'));
+      await tester.tap(find.text('Permitir y continuar'));
       await tester.pumpAndSettle();
+      if (find.text('Terminar y entrar').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Terminar y entrar'));
+        await tester.pumpAndSettle();
+      }
 
       expect(find.text('GENERAR ALERTA'), findsOneWidget);
       expect(find.text('Contabilidad'), findsOneWidget);
@@ -148,7 +155,7 @@ void main() {
         'Contabilidad2026',
       );
 
-      expect(find.text('ACTIVAR Y ENTRAR'), findsOneWidget);
+      expect(find.text('Permitir y continuar'), findsOneWidget);
     });
 
     testWidgets('una contraseña mala no dice si el correo existe', (
@@ -175,7 +182,7 @@ void main() {
       await openSignIn(tester);
       await typeCredentials(tester, 'carlos.jaimes', 'Contabilidad2026');
       expect(find.textContaining('@'), findsWidgets);
-      expect(find.text('ACTIVAR Y ENTRAR'), findsNothing);
+      expect(find.text('Permitir y continuar'), findsNothing);
     });
 
     testWidgets('la contraseña no se ve hasta que la persona lo pide', (
@@ -203,17 +210,64 @@ void main() {
         'Barbosa2026Riesgo',
       );
 
-      await tester.tap(find.text('ACTIVAR Y ENTRAR'));
+      await tester.tap(find.text('Permitir y continuar'));
       await tester.pumpAndSettle();
+      if (find.text('Terminar y entrar').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Terminar y entrar'));
+        await tester.pumpAndSettle();
+      }
 
       for (final String tab in <String>[
         'Emergencia',
         'Comunidad',
-        'Historial',
-        'Protocolos',
+        'Más',
       ]) {
         expect(find.text(tab), findsOneWidget, reason: 'falta la pestaña $tab');
       }
+    });
+
+    testWidgets('«Más» lleva a los reportes de riesgo y coordinación los atiende', (
+      WidgetTester tester,
+    ) async {
+      final FakeRiskRepository risks = FakeRiskRepository();
+      // Se siembra directo: `report` espera un `Future.delayed`, que dentro de la
+      // prueba (reloj simulado) no avanza solo.
+      risks.reports.add(
+        RiskReport(
+          id: 'r1',
+          kind: RiskKind.grieta,
+          place: 'Bloque B, 2.º piso',
+          status: RiskStatus.nuevo,
+          createdAt: DateTime.now(),
+        ),
+      );
+      await openSignIn(tester, risks: risks);
+      await typeCredentials(
+        tester,
+        'coordinacion@iic.edu.co',
+        'Barbosa2026Riesgo',
+      );
+      await tester.tap(find.text('Permitir y continuar'));
+      await tester.pumpAndSettle();
+      if (find.text('Terminar y entrar').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Terminar y entrar'));
+        await tester.pumpAndSettle();
+      }
+
+      await tester.tap(find.text('Más'));
+      await tester.pumpAndSettle();
+      expect(find.text('Simulacros'), findsOneWidget);
+      expect(find.text('Historial'), findsOneWidget);
+      expect(find.text('Protocolos'), findsOneWidget);
+
+      await tester.tap(find.text('Reportes de riesgo'));
+      await tester.pumpAndSettle();
+      expect(find.text('Grieta o daño'), findsOneWidget);
+      expect(find.textContaining('Bloque B, 2.º piso'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('riesgo-r1-atendido')));
+      await tester.pumpAndSettle();
+      expect(risks.reports.single.status, RiskStatus.atendido);
     });
 
     testWidgets('la comunidad se ve como tarjetas, no como tabla', (
@@ -225,8 +279,12 @@ void main() {
         'coordinacion@iic.edu.co',
         'Barbosa2026Riesgo',
       );
-      await tester.tap(find.text('ACTIVAR Y ENTRAR'));
+      await tester.tap(find.text('Permitir y continuar'));
       await tester.pumpAndSettle();
+      if (find.text('Terminar y entrar').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Terminar y entrar'));
+        await tester.pumpAndSettle();
+      }
 
       await tester.tap(find.text('Comunidad'));
       await tester.pumpAndSettle();

@@ -116,6 +116,8 @@ abstract final class ProfileMapper {
       routeHint: raw['routeHint'] as String? ?? '',
       distanceMeters: (raw['distanceMeters'] as num?)?.toInt() ?? 0,
       walkMinutes: (raw['walkMinutes'] as num?)?.toInt() ?? 0,
+      latitude: (raw['latitude'] as num?)?.toDouble(),
+      longitude: (raw['longitude'] as num?)?.toDouble(),
     );
   }
 

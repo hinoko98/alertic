@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/design/app_card.dart';
+import '../../../../shared/design/app_page.dart';
+import '../../../../shared/design/section_label.dart';
 import '../../../onboarding/domain/person_name.dart';
 import '../../domain/guardian_repository.dart';
 
@@ -23,69 +26,48 @@ class PickupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.ink),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.screenGutter,
-            0,
-            AppSpacing.screenGutter,
-            AppSpacing.xl,
+    return AppPage(
+      title: 'Cómo recogerlos',
+      subtitle: 'Al terminar la emergencia',
+      onBack: () => Navigator.of(context).pop(),
+      showHelp: false,
+      body: ListView(
+        padding: const EdgeInsets.all(AppSpacing.screenGutter),
+        children: <Widget>[
+          const Text('RECOGE A TUS HIJOS', style: AppTextStyles.screenTitle),
+          const SizedBox(height: AppSpacing.sm),
+          const Text(
+            'Preséntate en la portería del colegio. Una persona del colegio '
+            'verifica que eres su acudiente y te entrega a cada uno.',
+            style: AppTextStyles.body,
           ),
-          children: <Widget>[
-            Text(
-              'CÓMO RECOGERLOS',
-              style: AppTextStyles.eyebrow.copyWith(color: AppColors.brand),
+          const SizedBox(height: AppSpacing.lg),
+          const AppCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: <Widget>[
+                _PickupRow(label: 'Lleva', value: 'Documento de identidad'),
+                Divider(height: 1),
+                _PickupRow(
+                  label: 'Quién puede',
+                  value: 'Solo acudientes registrados',
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.sm),
-            const Text('RECOGE A TUS HIJOS', style: AppTextStyles.screenTitle),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Preséntate en la portería del colegio. Una persona del colegio '
-              'verifica que eres su acudiente y te entrega a cada uno.',
-              style: AppTextStyles.body,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border.fromBorderSide(BorderSide(color: AppColors.border)),
-              ),
-              child: Column(
-                children: <Widget>[
-                  _PickupRow(label: 'Lleva', value: 'Documento de identidad'),
-                  Divider(height: 1),
-                  _PickupRow(
-                    label: 'Quién puede',
-                    value: 'Solo acudientes registrados',
-                  ),
+          ),
+          const SectionLabel('A quién vas a recoger'),
+          AppCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: <Widget>[
+                for (int i = 0; i < children.length; i++) ...<Widget>[
+                  if (i > 0) const Divider(height: 1),
+                  _ChildRow(child: children[i]),
                 ],
-              ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.xl),
-            const Text('A QUIÉN VAS A RECOGER', style: AppTextStyles.eyebrow),
-            const SizedBox(height: AppSpacing.sm),
-            DecoratedBox(
-              decoration: BoxDecoration(border: Border.all(color: AppColors.border)),
-              child: Column(
-                children: <Widget>[
-                  for (int i = 0; i < children.length; i++) ...<Widget>[
-                    if (i > 0) const Divider(height: 1),
-                    _ChildRow(child: children[i]),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -147,7 +129,7 @@ class _ChildRow extends StatelessWidget {
             ),
           ),
           if (child.isSafe)
-            const Icon(Icons.check, size: 20, color: AppColors.brand),
+            const Icon(Icons.check_circle_outline, size: 20, color: AppColors.success),
         ],
       ),
     );

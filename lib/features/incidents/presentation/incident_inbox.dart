@@ -6,6 +6,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../shared/design/app_card.dart';
 import '../../alerts/presentation/widgets/hazard_icon.dart';
 import '../domain/incident.dart';
 import 'open_incidents.dart';
@@ -127,12 +128,11 @@ class _IncidentCardState extends State<_IncidentCard> {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.brand, width: 1.5),
-        ),
+      child: AppCard(
+        borderColor: AppColors.brand,
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: EdgeInsets.zero,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -210,9 +210,11 @@ class _Action extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: filled ? AppColors.ink : AppColors.surface,
-      shape: Border.fromBorderSide(
-        BorderSide(color: filled ? AppColors.ink : AppColors.border),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+        side: BorderSide(color: filled ? AppColors.ink : AppColors.border),
       ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Padding(

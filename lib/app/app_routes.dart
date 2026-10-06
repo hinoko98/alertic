@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../core/errors/error_reporter.dart';
+import '../features/assistant/presentation/assistant_screen.dart';
 import '../features/onboarding/domain/enrollment.dart';
 import '../features/onboarding/presentation/screens/confirm_identity_screen.dart';
 import '../features/onboarding/presentation/screens/enter_code_screen.dart';
-import '../features/onboarding/presentation/screens/how_it_works_screen.dart';
+import '../features/onboarding/presentation/screens/family_setup_screen.dart';
+import '../features/onboarding/presentation/screens/splash_screen.dart';
+import '../features/onboarding/presentation/screens/who_are_you_screen.dart';
 import '../features/onboarding/presentation/screens/permissions_screen.dart';
 import '../features/onboarding/presentation/screens/sign_in_screen.dart';
 import '../features/onboarding/presentation/screens/welcome_screen.dart';
 import '../features/session/domain/session.dart';
+import '../features/support/presentation/support_chat_screen.dart';
 import 'app_shell.dart';
 
 /// Rutas de la app. Por ahora solo el registro (bloque A del diseño).
@@ -17,11 +21,17 @@ import 'app_shell.dart';
 /// inicial segmento por segmento, así que una ruta anidada cuyo padre no existe
 /// en la tabla cae de vuelta al inicio.
 abstract final class AppRoutes {
+  /// La entrada animada. La app de verdad arranca aquí; las pruebas, en la
+  /// bienvenida.
+  static const String splash = '/entrada';
   static const String welcome = '/';
-  static const String howItWorks = '/como-funciona';
+  static const String whoAreYou = '/quien-eres';
   static const String enterCode = '/codigo';
   static const String confirmIdentity = '/confirmar-identidad';
   static const String permissions = '/permisos';
+
+  /// A quién se avisa cuando el estudiante está a salvo: el último paso.
+  static const String familySetup = '/familia';
 
   /// «Ya tengo cuenta»: docentes y administradores.
   static const String signIn = '/ingresar';
@@ -29,17 +39,40 @@ abstract final class AppRoutes {
   /// La app ya registrada. Recibe la sesión emitida por el servidor.
   static const String home = '/inicio';
 
+  /// El chat con el soporte del colegio (estudiantes y acudientes).
+  static const String chat = '/chat';
+
+  /// El asistente de riesgos: el botón «Ayuda».
+  static const String assistant = '/asistente';
+
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     return switch (settings.name) {
+      splash => _route(const SplashScreen(), settings),
       welcome => _route(const WelcomeScreen(), settings),
-      howItWorks => _route(const HowItWorksScreen(), settings),
+      whoAreYou => _route(const WhoAreYouScreen(), settings),
+      familySetup => _familySetupRoute(settings),
       enterCode => _route(const EnterCodeScreen(), settings),
       permissions => _route(const PermissionsScreen(), settings),
       signIn => _route(const SignInScreen(), settings),
       confirmIdentity => _confirmIdentityRoute(settings),
       home => _homeRoute(settings),
+      chat => _route(const SupportChatScreen(), settings),
+      assistant => _route(const AssistantScreen(), settings),
       _ => null,
     };
+  }
+
+  static Route<dynamic> _familySetupRoute(RouteSettings settings) {
+    final Object? session = settings.arguments;
+    if (session is! Session) {
+      ErrorReporter.report(
+        ArgumentError.value(session, 'arguments', 'Falta la sesión'),
+        StackTrace.current,
+        context: 'navegación',
+      );
+      return _route(const WelcomeScreen(), const RouteSettings(name: welcome));
+    }
+    return _route(FamilySetupScreen(session: session), settings);
   }
 
   /// Ruta para un nombre que no existe. Nunca debería pasar, pero si pasa la

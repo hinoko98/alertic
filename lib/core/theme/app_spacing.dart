@@ -11,5 +11,9 @@ abstract final class AppSpacing {
   static const double screenGutter = 20;
 
   /// Alto de los botones de acción principales.
-  static const double buttonHeight = 56;
+  static const double buttonHeight = 52;
+
+  /// Esquinas: tarjetas y botones.
+  static const double radius = 14;
+  static const double radiusSmall = 10;
 }

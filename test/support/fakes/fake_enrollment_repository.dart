@@ -4,6 +4,7 @@ import 'package:alertic/features/onboarding/domain/enrollment.dart';
 import 'package:alertic/features/onboarding/domain/enrollment_failure.dart';
 import 'package:alertic/features/onboarding/domain/personal_code.dart';
 import 'package:alertic/features/onboarding/data/enrollment_repository.dart';
+import 'package:alertic/features/onboarding/domain/school.dart';
 
 /// Matrícula de prueba, en memoria, con las personas del diseño.
 ///
@@ -26,11 +27,14 @@ class FakeEnrollmentRepository implements EnrollmentRepository {
     routeHint: 'Desde Aula 7 · 60 m por el corredor sur',
     distanceMeters: 60,
     walkMinutes: 1,
+    // Coordenadas de prueba: la cancha, a unos metros del colegio.
+    latitude: 5.93345,
+    longitude: -73.62135,
   );
 
   static final Map<String, Enrollment> _enrollments = <String, Enrollment>{
-    '7K4P2Q9M': StudentEnrollment(
-      code: PersonalCode.tryParse('7K4P2Q9M')!,
+    'IICB7K4P': StudentEnrollment(
+      code: PersonalCode.tryParse('IICB7K4P')!,
       fullName: 'Laura Camila Pérez Gómez',
       grade: '10° B',
       shift: 'Mañana',
@@ -42,8 +46,8 @@ class FakeEnrollmentRepository implements EnrollmentRepository {
         GuardianLink(fullName: 'Jorge Pérez', relationship: 'Padre'),
       ],
     ),
-    '3HW8X4LD': GuardianEnrollment(
-      code: PersonalCode.tryParse('3HW8X4LD')!,
+    'IICB3HW8': GuardianEnrollment(
+      code: PersonalCode.tryParse('IICB3HW8')!,
       fullName: 'Martha Gómez Ardila',
       maskedPhone: '310 ••• 4521',
       children: const <LinkedStudent>[
@@ -59,8 +63,8 @@ class FakeEnrollmentRepository implements EnrollmentRepository {
         ),
       ],
     ),
-    '8JK3T6RE': StudentEnrollment(
-      code: PersonalCode.tryParse('8JK3T6RE')!,
+    'IICB8JK3': StudentEnrollment(
+      code: PersonalCode.tryParse('IICB8JK3')!,
       fullName: 'Sofía Arenas Villamizar',
       grade: '10° B',
       shift: 'Mañana',
@@ -72,6 +76,18 @@ class FakeEnrollmentRepository implements EnrollmentRepository {
       ],
     ),
   };
+
+  @override
+  Future<School> findSchool(String schoolCode) async {
+    await Future<void>.delayed(latency);
+    if (schoolCode.toUpperCase() != 'IICB') {
+      throw const SchoolNotFound();
+    }
+    return const School(
+      name: 'Instituto Integrado de Comercio',
+      city: 'Barbosa, Santander',
+    );
+  }
 
   @override
   Future<Enrollment> findByCode(PersonalCode code) async {

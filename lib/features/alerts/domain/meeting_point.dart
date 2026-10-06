@@ -1,3 +1,4 @@
+import '../../../core/location/geo.dart';
 import 'hazard.dart';
 
 /// Punto de encuentro asignado a un grupo.
@@ -12,6 +13,8 @@ class MeetingPoint {
     required this.distanceMeters,
     required this.walkMinutes,
     this.onlyFor,
+    this.latitude,
+    this.longitude,
   });
 
   /// Código corto que se pinta en el plano: `P1`, `P2`.
@@ -29,6 +32,15 @@ class MeetingPoint {
   /// Algunos puntos solo aplican a una amenaza. La placa alta (P2) solo se usa
   /// en inundación; mandar ahí a todo el colegio por un sismo sería un error.
   final Hazard? onlyFor;
+
+  /// Dónde está en el mapa. Coordinación lo pone parándose en el punto; hasta
+  /// entonces la app no puede guiar en vivo hacia él y lo dice.
+  final double? latitude;
+  final double? longitude;
+
+  /// El punto en el mapa, o null si el colegio todavía no lo ubicó.
+  GeoPoint? get location =>
+      latitude == null || longitude == null ? null : GeoPoint(latitude!, longitude!);
 
   /// Resumen del encabezado del mapa: `A P1 · 60 m · 1 min`.
   ///

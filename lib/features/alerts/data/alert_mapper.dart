@@ -32,6 +32,7 @@ abstract final class AlertMapper {
         meetingPoint: raw['meetingPoint'] as String?,
         coordinatorNote: raw['coordinatorNote'] as String?,
         issuedBy: raw['issuedBy'] as String?,
+        isDrill: raw['isDrill'] as bool? ?? false,
         issuedAt: DateTime.tryParse(raw['issuedAt'] as String? ?? '')?.toLocal(),
       );
     } on InvalidAlertData catch (error, stack) {

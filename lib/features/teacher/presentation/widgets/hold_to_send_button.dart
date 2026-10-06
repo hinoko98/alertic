@@ -72,7 +72,9 @@ class _HoldToSendButtonState extends State<HoldToSendButton>
         child: Semantics(
           button: true,
           label: '${widget.label}. Mantén presionado para confirmar.',
-          child: SizedBox(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppSpacing.radius),
+            child: SizedBox(
             height: 64,
             child: Stack(
               children: <Widget>[
@@ -129,6 +131,7 @@ class _HoldToSendButtonState extends State<HoldToSendButton>
                 ),
               ],
             ),
+          ),
           ),
         ),
       ),

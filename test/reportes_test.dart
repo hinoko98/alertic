@@ -70,21 +70,25 @@ void main() {
 
   Future<void> signInAsStudent(WidgetTester tester, {IncidentRepository? override}) async {
     await pumpApp(tester, override: override, phone: false);
-    await tester.tap(find.text('EMPEZAR'));
+    await tester.tap(find.text('Empezar'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('SIGUIENTE'));
+    await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
 
     final Finder fields = find.byType(TextField);
-    await tester.enterText(fields.first, '7K4P');
+    await tester.enterText(fields.first, 'IICB');
     await tester.pumpAndSettle();
-    await tester.enterText(fields.last, '2Q9M');
+    await tester.enterText(fields.last, '7K4P');
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('SÍ, SOY YO'));
+    await tester.tap(find.text('Sí, soy yo'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('ACTIVAR Y ENTRAR'));
+    await tester.tap(find.text('Permitir y continuar'));
     await tester.pumpAndSettle();
+    if (find.text('Terminar y entrar').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Terminar y entrar'));
+      await tester.pumpAndSettle();
+    }
   }
 
   Future<void> signInWithPassword(
@@ -93,17 +97,21 @@ void main() {
     String password,
   ) async {
     await pumpApp(tester);
-    await tester.tap(find.text('YA TENGO CUENTA'));
+    await tester.tap(find.text('Ya tengo cuenta'));
     await tester.pumpAndSettle();
 
     final Finder fields = find.byType(TextField);
     await tester.enterText(fields.first, email);
     await tester.enterText(fields.last, password);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('ENTRAR'));
+    await tester.tap(find.text('Entrar'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('ACTIVAR Y ENTRAR'));
+    await tester.tap(find.text('Permitir y continuar'));
     await tester.pumpAndSettle();
+    if (find.text('Terminar y entrar').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Terminar y entrar'));
+      await tester.pumpAndSettle();
+    }
   }
 
   Future<void> signInAsTeacher(WidgetTester tester) => signInWithPassword(
@@ -124,7 +132,9 @@ void main() {
     ) async {
       await signInAsStudent(tester);
 
-      await tester.tap(find.text('REPORTAR EMERGENCIA'));
+      await tester.tap(find.text('Reportar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('reportar-emergencia')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('INCENDIOS'));
       await tester.pumpAndSettle();
@@ -141,7 +151,9 @@ void main() {
     testWidgets('si no llegó, NO dice «enviado»', (WidgetTester tester) async {
       await signInAsStudent(tester, override: _BrokenIncidents());
 
-      await tester.tap(find.text('REPORTAR EMERGENCIA'));
+      await tester.tap(find.text('Reportar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('reportar-emergencia')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('SISMOS'));
       await tester.pumpAndSettle();
@@ -167,7 +179,9 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('REPORTAR EMERGENCIA'));
+      await tester.tap(find.text('Reportar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('reportar-emergencia')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('LLUVIAS'));
       await tester.pumpAndSettle();

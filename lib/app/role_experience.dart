@@ -9,13 +9,13 @@ import '../features/onboarding/domain/enrollment.dart';
 import '../features/session/domain/session.dart';
 import '../features/student/presentation/screens/evacuation_map_screen.dart';
 import '../features/student/presentation/screens/guide_screen.dart';
-import '../features/student/presentation/screens/profile_screen.dart';
+import '../features/risks/presentation/report_risk_screen.dart';
 import '../features/guardian/presentation/screens/guardian_home_screen.dart';
 import '../features/panel/presentation/screens/community_tab.dart';
 import '../features/panel/presentation/screens/emergency_tab.dart';
-import '../features/panel/presentation/screens/history_tab.dart';
-import '../features/panel/presentation/screens/protocols_tab.dart';
+import '../features/panel/presentation/screens/more_tab.dart';
 import '../features/student/presentation/screens/student_home_screen.dart';
+import '../features/support/presentation/support_inbox_screen.dart';
 import '../features/teacher/presentation/screens/teacher_home_screen.dart';
 
 /// Una pestaña de la barra inferior.
@@ -24,11 +24,15 @@ class AppDestination {
     required this.label,
     required this.icon,
     required this.builder,
+    this.showsChatBadge = false,
   });
 
   final String label;
   final IconData icon;
   final WidgetBuilder builder;
+
+  /// La insignia de la pestaña cuenta los mensajes del colegio sin leer.
+  final bool showsChatBadge;
 }
 
 /// La app que ve cada rol.
@@ -89,14 +93,20 @@ final class StudentExperience implements RoleExperience {
             EvacuationMapScreen(student: profile),
       ),
       AppDestination(
-        label: 'Guía',
+        label: 'Guías',
         icon: Icons.menu_book_outlined,
         builder: (BuildContext context) => const GuideScreen(),
       ),
       AppDestination(
+        label: 'Reportar',
+        icon: Icons.warning_amber_outlined,
+        builder: (BuildContext context) =>
+            ReportRiskScreen(placeHint: profile.classroom),
+      ),
+      AppDestination(
         label: 'Perfil',
         icon: Icons.person_outline,
-        builder: (BuildContext context) => ProfileScreen(student: profile),
+        builder: (BuildContext context) => AccountScreen(enrollment: profile),
       ),
     ];
   }
@@ -128,9 +138,20 @@ final class TeacherExperience implements RoleExperience {
         builder: (BuildContext context) => TeacherHomeScreen(teacher: profile),
       ),
       AppDestination(
-        label: 'Guía',
+        label: 'Guías',
         icon: Icons.menu_book_outlined,
         builder: (BuildContext context) => const GuideScreen(),
+      ),
+      AppDestination(
+        label: 'Reportar',
+        icon: Icons.warning_amber_outlined,
+        builder: (BuildContext context) => const ReportRiskScreen(),
+      ),
+      AppDestination(
+        label: 'Mensajes',
+        icon: Icons.forum_outlined,
+        showsChatBadge: true,
+        builder: (BuildContext context) => const SupportInboxScreen(),
       ),
       AppDestination(
         label: 'Cuenta',
@@ -167,7 +188,17 @@ final class GuardianExperience implements RoleExperience {
             GuardianHomeScreen(guardian: profile),
       ),
       AppDestination(
-        label: 'Cuenta',
+        label: 'Guías',
+        icon: Icons.menu_book_outlined,
+        builder: (BuildContext context) => const GuideScreen(),
+      ),
+      AppDestination(
+        label: 'Reportar',
+        icon: Icons.warning_amber_outlined,
+        builder: (BuildContext context) => const ReportRiskScreen(),
+      ),
+      AppDestination(
+        label: 'Perfil',
         icon: Icons.person_outline,
         builder: (BuildContext context) => AccountScreen(enrollment: profile),
       ),
@@ -211,14 +242,15 @@ final class AdminExperience implements RoleExperience {
         builder: (BuildContext context) => const CommunityTab(),
       ),
       AppDestination(
-        label: 'Historial',
-        icon: Icons.history,
-        builder: (BuildContext context) => const HistoryTab(),
+        label: 'Mensajes',
+        icon: Icons.forum_outlined,
+        showsChatBadge: true,
+        builder: (BuildContext context) => const SupportInboxScreen(canAssign: true),
       ),
       AppDestination(
-        label: 'Protocolos',
-        icon: Icons.menu_book_outlined,
-        builder: (BuildContext context) => const ProtocolsTab(),
+        label: 'Más',
+        icon: Icons.apps_outlined,
+        builder: (BuildContext context) => const MoreTab(),
       ),
       AppDestination(
         label: 'Cuenta',

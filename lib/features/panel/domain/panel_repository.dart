@@ -151,6 +151,9 @@ class HelpRequest {
     required this.grade,
     required this.location,
     required this.reportedAt,
+    this.helpKind,
+    this.helpDetails,
+    this.medicalInfo,
   });
 
   final String personId;
@@ -158,6 +161,22 @@ class HelpRequest {
   final String grade;
   final String location;
   final DateTime reportedAt;
+
+  /// `herido`, `atrapado`, `otra_persona` u `otra_cosa`; null si no dijo.
+  final String? helpKind;
+  final String? helpDetails;
+
+  /// Lo que la persona anotó para un brigadista. Solo lo recibe coordinación.
+  final String? medicalInfo;
+
+  /// Lo que pasa, en palabras, o null si no lo dijo.
+  String? get helpKindLabel => switch (helpKind) {
+        'herido' => 'Estoy herido',
+        'atrapado' => 'Estoy atrapado',
+        'otra_persona' => 'Hay otra persona que necesita ayuda',
+        'otra_cosa' => 'Otra cosa',
+        _ => null,
+      };
 }
 
 class MeetingPointCount {

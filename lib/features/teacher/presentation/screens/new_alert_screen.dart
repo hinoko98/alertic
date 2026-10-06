@@ -6,6 +6,8 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/design/app_card.dart';
+import '../../../../shared/design/app_page.dart';
 import '../../../alerts/domain/alert.dart';
 import '../../../alerts/domain/alert_level.dart';
 import '../../../alerts/domain/hazard.dart';
@@ -27,6 +29,8 @@ class NewAlertScreen extends StatefulWidget {
     required this.groups,
     this.initialHazard,
     this.incidentId,
+    this.drillId,
+    this.startAsDrill = false,
     super.key,
   });
 
@@ -40,6 +44,12 @@ class NewAlertScreen extends StatefulWidget {
   /// El reporte de la comunidad que motiva esta alerta, para dejarlo enlazado.
   final String? incidentId;
 
+  /// El simulacro programado que se va a realizar.
+  final String? drillId;
+
+  /// Arranca con «es un simulacro» encendido.
+  final bool startAsDrill;
+
   @override
   State<NewAlertScreen> createState() => _NewAlertScreenState();
 }
@@ -49,6 +59,7 @@ class _NewAlertScreenState extends State<NewAlertScreen> {
   AlertLevel? _level;
   String _scope = _everyone;
   bool _sending = false;
+  late bool _drill = widget.startAsDrill || widget.drillId != null;
 
   /// A cuánta gente le llega, según el servidor. `null` mientras se consulta o
   /// si no se pudo saber.
@@ -131,13 +142,15 @@ class _NewAlertScreenState extends State<NewAlertScreen> {
       final AlertDraft draft = AlertDraft(
         level: level,
         hazard: hazard,
-        title: _titleFor(hazard, level),
+        title: _drill ? _drillTitle(hazard) : _titleFor(hazard, level),
         scope: _scope,
         // Sin punto: el servidor usa el principal del colegio, el que coordinación
         // definió. Escribir «P1» aquí era suponer que existe uno con ese código.
         meetingPoint: null,
         instructions: await _instructionsFor(hazard, level, scope),
         incidentId: widget.incidentId,
+        drill: _drill,
+        drillId: widget.drillId,
       );
 
       final Alert alert =
@@ -169,107 +182,125 @@ class _NewAlertScreenState extends State<NewAlertScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenGutter,
-                AppSpacing.md,
-                AppSpacing.screenGutter,
-                AppSpacing.md,
+    return AppPage(
+      title: _drill ? 'Nuevo simulacro' : 'NUEVA ALERTA',
+      subtitle: 'Llega a todo el colegio al instante',
+      onBack: _sending ? null : () => Navigator.of(context).maybePop(),
+      showHelp: false,
+      bottom: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.screenGutter,
+            AppSpacing.sm,
+            AppSpacing.screenGutter,
+            AppSpacing.md,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(
+                // Con el número real del servidor. Mientras llega, o si no se
+                // pudo saber, se dice sin inventar una cifra.
+                '${_reach == null ? 'Llega a toda la comunidad registrada' : 'Llega a $_reach personas'}: '
+                'estudiantes, docentes, acudientes y Defensa Civil Barbosa.',
+                style: AppTextStyles.caption,
               ),
-              child: Row(
-                children: <Widget>[
-                  const Expanded(
-                    child: Text('NUEVA ALERTA', style: AppTextStyles.screenTitle),
-                  ),
-                  TextButton(
-                    onPressed: _sending ? null : () => Navigator.of(context).pop(),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.inkMuted,
-                    ),
-                    child: const Text('CANCELAR'),
-                  ),
-                ],
+              const SizedBox(height: AppSpacing.md),
+              HoldToSendButton(
+                label: 'MANTÉN PARA ENVIAR',
+                enabled: _isComplete && !_sending,
+                isSending: _sending,
+                background: _level == null
+                    ? AppColors.brand
+                    : AlertLevelStyle.of(_level!).headerColor,
+                foreground: _level == AlertLevel.amarilla
+                    ? AppColors.ink
+                    : AppColors.onBrand,
+                onCompleted: _send,
               ),
+            ],
+          ),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(AppSpacing.screenGutter),
+        children: <Widget>[
+          const _StepLabel(number: 1, label: 'Qué pasa'),
+          _HazardPicker(
+            selected: _hazard,
+            onChanged: (Hazard value) => setState(() => _hazard = value),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          const _StepLabel(number: 2, label: 'Qué tan grave'),
+          for (final AlertLevel level in AlertLevel.values)
+            _LevelOption(
+              level: level,
+              selected: _level == level,
+              onTap: () => setState(() => _level = level),
             ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.screenGutter,
+          const SizedBox(height: AppSpacing.lg),
+          const _StepLabel(number: 3, label: 'Dónde'),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: <Widget>[
+              for (final String scope in <String>[_everyone, ..._groups])
+                _ScopeChip(
+                  label: scope,
+                  selected: _scope == scope,
+                  onTap: () => setState(() => _scope = scope),
                 ),
-                children: <Widget>[
-                  const _StepLabel(number: 1, label: 'Qué pasa'),
-                  _HazardPicker(
-                    selected: _hazard,
-                    onChanged: (Hazard value) => setState(() => _hazard = value),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  const _StepLabel(number: 2, label: 'Qué tan grave'),
-                  for (final AlertLevel level in AlertLevel.values)
-                    _LevelOption(
-                      level: level,
-                      selected: _level == level,
-                      onTap: () => setState(() => _level = level),
-                    ),
-                  const SizedBox(height: AppSpacing.lg),
-                  const _StepLabel(number: 3, label: 'Dónde'),
-                  Wrap(
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.sm,
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          AppCard(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: <Widget>[
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      for (final String scope in <String>[_everyone, ..._groups])
-                        _ScopeChip(
-                          label: scope,
-                          selected: _scope == scope,
-                          onTap: () => setState(() => _scope = scope),
-                        ),
+                      Text('Es un simulacro', style: AppTextStyles.itemTitle),
+                      SizedBox(height: 2),
+                      Text(
+                        'Se marca como práctica en todas las pantallas y se '
+                        'miden los tiempos de evacuación.',
+                        style: AppTextStyles.caption,
+                      ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.xl),
-                ],
-              ),
+                ),
+                Switch(
+                  key: const Key('es-simulacro'),
+                  value: _drill,
+                  onChanged: widget.drillId != null
+                      ? null
+                      : (bool value) => setState(() => _drill = value),
+                  activeThumbColor: AppColors.surface,
+                  activeTrackColor: AppColors.brand,
+                  inactiveThumbColor: AppColors.surface,
+                  inactiveTrackColor: AppColors.border,
+                  trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+                ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenGutter,
-                0,
-                AppSpacing.screenGutter,
-                AppSpacing.lg,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  Text(
-                    // Con el número real del servidor. Mientras llega, o si no
-                    // se pudo saber, se dice sin inventar una cifra.
-                    '${_reach == null ? 'Llega a toda la comunidad registrada' : 'Llega a $_reach personas'}: '
-                    'estudiantes, docentes, acudientes y Defensa Civil Barbosa.',
-                    style: AppTextStyles.caption,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  HoldToSendButton(
-                    label: 'MANTÉN PARA ENVIAR',
-                    enabled: _isComplete && !_sending,
-                    isSending: _sending,
-                    background: _level == null
-                        ? AppColors.brand
-                        : AlertLevelStyle.of(_level!).headerColor,
-                    foreground: _level == AlertLevel.amarilla
-                        ? AppColors.ink
-                        : AppColors.onBrand,
-                    onCompleted: _send,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+        ],
       ),
     );
   }
+
+  /// El título de un simulacro: lo dice con todas las letras.
+  static String _drillTitle(Hazard hazard) => switch (hazard) {
+        Hazard.sismo => 'SIMULACRO DE SISMO',
+        Hazard.incendio => 'SIMULACRO DE INCENDIO',
+        Hazard.inundacion => 'SIMULACRO DE INUNDACIÓN',
+        Hazard.lluvia => 'SIMULACRO DE LLUVIAS',
+      };
 
   /// Título por defecto según lo escogido.
   ///
@@ -367,11 +398,13 @@ class _HazardPicker extends StatelessWidget {
           Expanded(
             child: Material(
               color: selected == hazard ? AppColors.brand : AppColors.surface,
-              shape: Border.fromBorderSide(
-                BorderSide(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                side: BorderSide(
                   color: selected == hazard ? AppColors.brand : AppColors.border,
                 ),
               ),
+              clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: () => onChanged(hazard),
                 child: Padding(
@@ -431,17 +464,26 @@ class _LevelOption extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Material(
-        color: selected ? const Color(0xFFFDEDEA) : AppColors.surface,
-        shape: Border.fromBorderSide(
-          BorderSide(color: selected ? AppColors.brand : AppColors.border),
+        color: selected ? AppColors.brandSoft : AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+          side: BorderSide(color: selected ? AppColors.brand : AppColors.border),
         ),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Row(
               children: <Widget>[
-                Container(width: 18, height: 18, color: style.headerColor),
+                Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: style.headerColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
                 const SizedBox(width: AppSpacing.md),
                 Text(
                   level.label,
@@ -480,9 +522,10 @@ class _ScopeChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: selected ? AppColors.ink : AppColors.surface,
-      shape: Border.fromBorderSide(
-        BorderSide(color: selected ? AppColors.ink : AppColors.border),
+      shape: StadiumBorder(
+        side: BorderSide(color: selected ? AppColors.ink : AppColors.border),
       ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Padding(

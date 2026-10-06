@@ -44,7 +44,7 @@ void main() {
   ) async {
     await pumpApp(tester);
 
-    await tester.tap(find.text('YA TENGO CUENTA'));
+    await tester.tap(find.text('Ya tengo cuenta'));
     await tester.pumpAndSettle();
 
     final Finder fields = find.byType(TextField);
@@ -52,20 +52,24 @@ void main() {
     await tester.enterText(fields.last, password);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('ENTRAR'));
+    await tester.tap(find.text('Entrar'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('ACTIVAR Y ENTRAR'));
+    await tester.tap(find.text('Permitir y continuar'));
     await tester.pumpAndSettle();
+    if (find.text('Terminar y entrar').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Terminar y entrar'));
+      await tester.pumpAndSettle();
+    }
   }
 
   /// Entra con el código del carné: estudiantes y acudientes.
   Future<void> signInWithCode(WidgetTester tester, String code) async {
     await pumpApp(tester);
 
-    await tester.tap(find.text('EMPEZAR'));
+    await tester.tap(find.text('Empezar'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('SIGUIENTE'));
+    await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
 
     final Finder fields = find.byType(TextField);
@@ -74,10 +78,14 @@ void main() {
     await tester.enterText(fields.last, code.substring(4));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('SÍ, SOY YO'));
+    await tester.tap(find.text('Sí, soy yo'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('ACTIVAR Y ENTRAR'));
+    await tester.tap(find.text('Permitir y continuar'));
     await tester.pumpAndSettle();
+    if (find.text('Terminar y entrar').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Terminar y entrar'));
+      await tester.pumpAndSettle();
+    }
   }
 
   group('bloque D · docente', () {
@@ -189,7 +197,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // El docente también está en el edificio: primero responde por él.
-      await tester.tap(find.text('ESTOY A SALVO'));
+      await tester.tap(find.text('Estoy a salvo'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('LISTA DEL GRUPO'));
@@ -211,7 +219,7 @@ void main() {
       );
       alerts.simulate(AlertLevel.roja);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('ESTOY A SALVO'));
+      await tester.tap(find.text('Estoy a salvo'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('LISTA DEL GRUPO'));
       await tester.pumpAndSettle();
@@ -230,9 +238,9 @@ void main() {
     testWidgets('en calma muestra a los hijos sin alarmar', (
       WidgetTester tester,
     ) async {
-      await signInWithCode(tester, '3HW8X4LD');
+      await signInWithCode(tester, 'IICB3HW8');
 
-      expect(find.text('SIN ALERTAS'), findsOneWidget);
+      expect(find.text('Sin alertas activas'), findsOneWidget);
       expect(find.text('TUS HIJOS'), findsOneWidget);
       expect(find.textContaining('Laura Pérez'), findsOneWidget);
       expect(find.textContaining('Andrés Pérez'), findsOneWidget);
@@ -241,7 +249,7 @@ void main() {
     testWidgets('durante una alerta dice primero que no vaya al colegio', (
       WidgetTester tester,
     ) async {
-      await signInWithCode(tester, '3HW8X4LD');
+      await signInWithCode(tester, 'IICB3HW8');
 
       alerts.simulate(AlertLevel.roja);
       await tester.pumpAndSettle();
@@ -262,7 +270,7 @@ void main() {
     testWidgets('cómo recogerlos lista a los hijos', (
       WidgetTester tester,
     ) async {
-      await signInWithCode(tester, '3HW8X4LD');
+      await signInWithCode(tester, 'IICB3HW8');
 
       await tester.tap(find.text('CÓMO RECOGERLOS'));
       await tester.pumpAndSettle();

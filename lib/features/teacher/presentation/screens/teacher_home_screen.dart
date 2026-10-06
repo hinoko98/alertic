@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/app_scope.dart';
+import '../../../../app/shell_scope.dart';
+import '../../../../shared/design/app_card.dart';
+import '../../../../shared/design/app_page.dart';
+import '../../../../shared/design/section_label.dart';
+import '../../../../shared/widgets/primary_button.dart';
+import '../../../account/presentation/alerts_feed_screen.dart';
+import '../../../drills/presentation/drills_screen.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -16,7 +23,7 @@ import '../../../student/presentation/widgets/home_tile.dart';
 import 'group_roster_screen.dart';
 import 'new_alert_screen.dart';
 
-/// Pantalla 13: el inicio del docente.
+/// El inicio del docente.
 ///
 /// Con una alerta activa, lo primero es la lista de su grupo: el docente es
 /// quien responde por 32 personas que puede ver con sus propios ojos. Sin
@@ -29,81 +36,87 @@ class TeacherHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppScope scope = AppScope.of(context);
+    final String? school = ShellScope.maybeOf(context)?.schoolName;
 
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: StreamBuilder<Alert?>(
-          stream: scope.alertRepository.watchActiveAlert(),
-          builder: (BuildContext context, AsyncSnapshot<Alert?> snapshot) {
-            final Alert? active = snapshot.data;
+    return StreamBuilder<Alert?>(
+      stream: scope.alertRepository.watchActiveAlert(),
+      builder: (BuildContext context, AsyncSnapshot<Alert?> snapshot) {
+        final Alert? active = snapshot.data;
 
-            return Column(
-              children: <Widget>[
-                _TopBar(teacher: teacher),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.screenGutter,
-                      AppSpacing.lg,
-                      AppSpacing.screenGutter,
-                      AppSpacing.xl,
-                    ),
-                    children: <Widget>[
-                      if (active != null) ...<Widget>[
-                        _ActiveAlertBanner(
-                          alert: active,
-                          onOpen: () => _openRoster(context, active),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                      ],
-                      const Text('AHORA ESTÁS CON', style: AppTextStyles.eyebrow),
-                      const SizedBox(height: AppSpacing.sm),
-                      _CurrentGroupCard(teacher: teacher),
-                      const SizedBox(height: AppSpacing.lg),
-                      Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: HomeTile(
-                              icon: Icons.people_outline,
-                              label: 'LISTA DEL GRUPO',
-                              onTap: () => active == null
-                                  ? _noAlert(context)
-                                  : _openRoster(context, active),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            // El número es el de reportes sin atender de sus
-                            // grupos, según el servidor, y cambia solo cuando
-                            // llega uno: ya no está escrito a mano.
-                            child: OpenIncidents(
-                              builder: (BuildContext context, OpenIncidentsState state) =>
-                                  HomeTile(
-                                icon: Icons.mark_email_unread_outlined,
-                                label: state.incidents.isEmpty
-                                    ? 'REPORTES'
-                                    : 'REPORTES · ${state.incidents.length}',
-                                onTap: () => _openReports(context),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+        return AppPage(
+          title: 'Hola, ${PersonName.firstName(teacher.fullName)}',
+          subtitle: <String>['Docente', ?school].join(' · '),
+          bottom: _IssueButton(
+            teacher: teacher,
+            activeAlert: active,
+            // Con confirmación: ver `confirmEndAlert`.
+            onEnd: () => confirmEndAlert(context, active!),
+          ),
+          body: ListView(
+            padding: const EdgeInsets.all(AppSpacing.screenGutter),
+            children: <Widget>[
+              if (active != null) ...<Widget>[
+                _ActiveAlertBanner(
+                  alert: active,
+                  onOpen: () => _openRoster(context, active),
                 ),
-                _IssueButton(
-                  teacher: teacher,
-                  activeAlert: active,
-                  // Con confirmación: ver `confirmEndAlert`.
-                  onEnd: () => confirmEndAlert(context, active!),
-                ),
+                const SizedBox(height: AppSpacing.md),
               ],
-            );
-          },
-        ),
-      ),
+              const SectionLabel('Ahora estás con', padding: EdgeInsets.only(bottom: AppSpacing.sm)),
+              _CurrentGroupCard(teacher: teacher),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: HomeTile(
+                      icon: Icons.people_outline,
+                      label: 'LISTA DEL GRUPO',
+                      onTap: () => active == null
+                          ? _noAlert(context)
+                          : _openRoster(context, active),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    // El número es el de reportes sin atender de sus grupos,
+                    // según el servidor, y cambia solo cuando llega uno.
+                    child: OpenIncidents(
+                      builder: (BuildContext context, OpenIncidentsState state) =>
+                          HomeTile(
+                        icon: Icons.mark_email_unread_outlined,
+                        label: state.incidents.isEmpty
+                            ? 'REPORTES'
+                            : 'REPORTES · ${state.incidents.length}',
+                        onTap: () => _openReports(context),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: HomeTile(
+                      icon: Icons.event_outlined,
+                      label: 'Simulacros',
+                      onTap: () => pushInShell<void>(context, (_) => const DrillsScreen()),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: HomeTile(
+                      icon: Icons.notifications_none,
+                      label: 'Alertas y avisos',
+                      onTap: () => pushInShell<void>(context, (_) => const AlertsFeedScreen()),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -161,42 +174,6 @@ class TeacherHomeScreen extends StatelessWidget {
   }
 }
 
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.teacher});
-
-  final TeacherEnrollment teacher;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.screenGutter,
-        AppSpacing.md,
-        AppSpacing.screenGutter,
-        AppSpacing.md,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text(
-            'ALERTIC',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.5,
-              color: AppColors.ink,
-            ),
-          ),
-          Text(
-            '${PersonName.short(teacher.fullName)} · DOCENTE'.toUpperCase(),
-            style: AppTextStyles.caption.copyWith(fontSize: 11),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ActiveAlertBanner extends StatelessWidget {
   const _ActiveAlertBanner({required this.alert, required this.onOpen});
 
@@ -209,7 +186,9 @@ class _ActiveAlertBanner extends StatelessWidget {
 
     return Material(
       color: style.headerColor,
+      borderRadius: BorderRadius.circular(AppSpacing.radius),
       child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.radius),
         onTap: onOpen,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -269,8 +248,8 @@ class _CurrentGroupCard extends StatelessWidget {
     // inventa uno.
     final List<String> place = (summary?.classroom ?? '').split(' · ');
 
-    return DecoratedBox(
-      decoration: BoxDecoration(border: Border.all(color: AppColors.border)),
+    return AppCard(
+      padding: EdgeInsets.zero,
       child: Column(
         children: <Widget>[
           Padding(
@@ -365,43 +344,29 @@ class _IssueButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool hasAlert = activeAlert != null;
 
-    return SafeArea(
-      top: false,
-      child: Material(
-        color: hasAlert ? AppColors.ink : AppColors.brand,
-        child: InkWell(
-          onTap: () {
-            if (hasAlert) {
-              onEnd();
-              return;
-            }
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (BuildContext context) =>
-                    NewAlertScreen(groups: teacher.groups),
-              ),
-            );
-          },
-          child: SizedBox(
-            width: double.infinity,
-            height: AppSpacing.buttonHeight,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Icon(
-                  hasAlert ? Icons.stop_circle_outlined : Icons.campaign_outlined,
-                  size: 20,
-                  color: AppColors.onBrand,
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Text(
-                  hasAlert ? 'FINALIZAR ALERTA' : 'GENERAR ALERTA',
-                  style: AppTextStyles.button.copyWith(color: AppColors.onBrand),
-                ),
-              ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.screenGutter,
+        AppSpacing.sm,
+        AppSpacing.screenGutter,
+        AppSpacing.md,
+      ),
+      child: PrimaryButton(
+        key: const Key('emitir-o-finalizar'),
+        label: hasAlert ? 'FINALIZAR ALERTA' : 'GENERAR ALERTA',
+        icon: hasAlert ? Icons.stop_circle_outlined : Icons.campaign_outlined,
+        background: hasAlert ? AppColors.ink : AppColors.brand,
+        onPressed: () {
+          if (hasAlert) {
+            onEnd();
+            return;
+          }
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (BuildContext context) => NewAlertScreen(groups: teacher.groups),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

@@ -1,168 +1,165 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/app_scope.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../../core/errors/error_reporter.dart';
 import '../../../../app/shell_scope.dart';
+import '../../../../core/errors/error_reporter.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/design/app_card.dart';
+import '../../../../shared/design/app_page.dart';
+import '../../../../shared/design/icon_bubble.dart';
+import '../../../../shared/design/section_label.dart';
+import '../../../../shared/design/status_banner.dart';
+import '../../../../shared/format.dart';
+import '../../../account/presentation/alerts_feed_screen.dart';
 import '../../../alerts/domain/alert.dart';
-import '../../../alerts/domain/hazard.dart';
-import '../../../incidents/domain/incident.dart';
-import '../../../alerts/presentation/widgets/alert_level_style.dart';
+import '../../../alerts/domain/alert_level.dart';
+import '../../../alerts/presentation/widgets/hazard_icon.dart';
+import '../../../drills/domain/drill_repository.dart';
+import '../../../drills/presentation/drills_screen.dart';
+import '../../../help/presentation/help_screen.dart';
 import '../../../onboarding/domain/enrollment.dart';
 import '../../../onboarding/domain/person_name.dart';
-import '../widgets/hazard_report_sheet.dart';
-import '../widgets/home_tile.dart';
 
-/// Pantalla 10: el inicio del estudiante.
+/// Pantalla 06: el inicio del estudiante.
 ///
-/// En calma responde una sola pregunta: dónde me toca si suena la alarma. Con
-/// una alerta activa, esa alerta manda sobre todo lo demás.
-class StudentHomeScreen extends StatelessWidget {
+/// En calma responde una pregunta: ¿pasa algo? Un banner verde dice que no, y
+/// debajo están los accesos que se usan antes de una emergencia. Con una alerta
+/// activa, esa alerta manda sobre todo lo demás (la pone encima el `AlertGate`).
+class StudentHomeScreen extends StatefulWidget {
   const StudentHomeScreen({required this.student, super.key});
 
   final StudentEnrollment student;
 
   @override
+  State<StudentHomeScreen> createState() => _StudentHomeScreenState();
+}
+
+class _StudentHomeScreenState extends State<StudentHomeScreen> {
+  Drill? _nextDrill;
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_started) {
+      _started = true;
+      _loadDrill();
+    }
+  }
+
+  Future<void> _loadDrill() async {
+    final DrillRepository? repository = AppScope.of(context).drillRepository;
+    if (repository == null) return;
+    try {
+      final DrillOverview overview = await repository.load();
+      if (mounted) setState(() => _nextDrill = overview.next);
+    } catch (error, stack) {
+      // El próximo simulacro es un extra: sin él, el inicio sirve igual.
+      ErrorReporter.report(error, stack, context: 'próximo simulacro');
+    }
+  }
+
+  void _openTab(String label) => ShellScope.maybeOf(context)?.openTab(label);
+
+  void _openDrills() => _push(
+        (_) => DrillsScreen(
+          meetingPoint: widget.student.meetingPoint.code,
+          onReviewRoute: () => _openTab('Mapa'),
+        ),
+      );
+
+  Future<void> _push(WidgetBuilder builder) => pushInShell<void>(context, builder);
+
+  @override
   Widget build(BuildContext context) {
     final AppScope scope = AppScope.of(context);
+    final String? school = ShellScope.maybeOf(context)?.schoolName;
+    final StudentEnrollment student = widget.student;
 
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: <Widget>[
-            _TopBar(student: student),
-            Expanded(
-              child: StreamBuilder<Alert?>(
-                stream: scope.alertRepository.watchActiveAlert(),
-                builder: (BuildContext context, AsyncSnapshot<Alert?> snapshot) {
-                  return ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.screenGutter,
-                      AppSpacing.lg,
-                      AppSpacing.screenGutter,
-                      AppSpacing.xl,
-                    ),
-                    children: <Widget>[
-                      _SchoolStatus(alert: snapshot.data),
-                      const SizedBox(height: AppSpacing.xl),
-                      _MeetingPointCard(student: student),
-                      const SizedBox(height: AppSpacing.lg),
-                      Row(
+    return AppPage(
+      title: 'Hola, ${PersonName.firstName(student.fullName)}',
+      subtitle: <String>[?school, student.grade].join(' · '),
+      body: StreamBuilder<Alert?>(
+        stream: scope.alertRepository.watchActiveAlert(),
+        builder: (BuildContext context, AsyncSnapshot<Alert?> snapshot) {
+          return ListView(
+            padding: const EdgeInsets.all(AppSpacing.screenGutter),
+            children: <Widget>[
+              _SchoolStatus(alert: snapshot.data),
+              const SectionLabel('Tu punto de encuentro'),
+              _MeetingPointCard(student: student, onTap: () => _openTab('Mapa')),
+              const SectionLabel('Accesos rápidos'),
+              _QuickGrid(
+                tiles: <_Tile>[
+                  _Tile(
+                    icon: Icons.map_outlined,
+                    label: 'Mi ruta de evacuación',
+                    onTap: () => _openTab('Mapa'),
+                  ),
+                  _Tile(
+                    icon: Icons.menu_book_outlined,
+                    label: 'Qué hacer si…',
+                    onTap: () => _openTab('Guías'),
+                  ),
+                  _Tile(
+                    icon: Icons.warning_amber_outlined,
+                    label: 'Reportar un riesgo',
+                    onTap: () => _openTab('Reportar'),
+                  ),
+                  _Tile(
+                    icon: Icons.event_outlined,
+                    label: 'Simulacros',
+                    onTap: _openDrills,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              if (_nextDrill != null)
+                _NextDrillCard(
+                  drill: _nextDrill!,
+                  onTap: _openDrills,
+                ),
+              if (_nextDrill != null) const SizedBox(height: AppSpacing.sm),
+              AppCard(
+                key: const Key('alertas-y-avisos'),
+                onTap: () => _push((_) => const AlertsFeedScreen()),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: const Row(
+                  children: <Widget>[
+                    IconBubble.neutral(icon: Icons.notifications_none, size: 38),
+                    SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Expanded(
-                            child: HomeTile(
-                              icon: Icons.menu_book_outlined,
-                              label: 'QUÉ HACER',
-                              onTap: () => _openTab(context, 'Guía'),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: HomeTile(
-                              icon: Icons.history,
-                              label: 'HISTORIAL',
-                              onTap: () => _openTab(context, 'Perfil'),
-                            ),
-                          ),
+                          Text('Alertas y avisos', style: AppTextStyles.itemTitle),
+                          Text('Lo que pasó en tu colegio y tus reportes', style: AppTextStyles.caption),
                         ],
                       ),
-                    ],
-                  );
-                },
+                    ),
+                    Icon(Icons.chevron_right, color: AppColors.inkMuted),
+                  ],
+                ),
               ),
-            ),
-            _ReportButton(student: student),
-          ],
+            ],
+          );
+        },
+      ),
+      bottom: _HelpBar(
+        onTap: () => _push(
+          (_) => HelpScreen(
+            alert: null,
+            classroom: student.classroom,
+          ),
         ),
       ),
     );
   }
-
-  static void _openTab(BuildContext context, String label) =>
-      ShellScope.maybeOf(context)?.openTab(label);
 }
 
-/// Encabezado con quién es la persona y si el celular tiene señal.
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.student});
-
-  final StudentEnrollment student;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.screenGutter,
-        AppSpacing.md,
-        AppSpacing.screenGutter,
-        AppSpacing.md,
-      ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Text(
-                  'ALERTIC',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
-                    color: AppColors.ink,
-                  ),
-                ),
-                Text(
-                  '${PersonName.short(student.fullName)} · ${student.grade}'
-                      .toUpperCase(),
-                  style: AppTextStyles.caption.copyWith(fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          // TODO(conexión): reflejar el estado real de la red cuando exista el
-          // backend. Hoy es fijo para no mentirle a la persona con un ícono que
-          // no mide nada.
-          const _ConnectionChip(),
-        ],
-      ),
-    );
-  }
-}
-
-class _ConnectionChip extends StatelessWidget {
-  const _ConnectionChip();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(border: Border.all(color: AppColors.border)),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 5),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(Icons.wifi, size: 13, color: AppColors.ink),
-          SizedBox(width: 5),
-          Text(
-            'EN LÍNEA',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.8,
-              color: AppColors.ink,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// El estado del colegio: sin alertas, o la alerta activa.
+/// El estado del colegio: verde y tranquilo, o la alerta activa.
 class _SchoolStatus extends StatelessWidget {
   const _SchoolStatus({required this.alert});
 
@@ -172,168 +169,220 @@ class _SchoolStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     final Alert? active = alert;
     if (active == null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text('ESTADO DEL COLEGIO', style: AppTextStyles.eyebrow),
-          const SizedBox(height: AppSpacing.sm),
-          const Text('SIN ALERTAS', style: AppTextStyles.screenTitle),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Jornada normal · revisado ${_nowLabel()}',
-            style: AppTextStyles.caption,
-          ),
-        ],
+      return const StatusBanner(
+        key: Key('sin-alertas'),
+        icon: Icons.verified_user_outlined,
+        title: 'Sin alertas activas',
+        subtitle: 'Todo tranquilo en tu colegio',
       );
     }
 
-    final AlertLevelStyle style = AlertLevelStyle.of(active.level);
-    return Container(
-      width: double.infinity,
-      color: style.headerColor,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return StatusBanner(
+      icon: hazardIcon(active.hazard),
+      tone: active.level == AlertLevel.roja ? BannerTone.danger : BannerTone.warning,
+      title: '${active.title} · ${active.issuedAtLabel}',
+      subtitle: active.scope,
+    );
+  }
+}
+
+class _MeetingPointCard extends StatelessWidget {
+  const _MeetingPointCard({required this.student, required this.onTap});
+
+  final StudentEnrollment student;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
         children: <Widget>[
-          Text(
-            '${active.level.label} · ACTIVA · ${active.issuedAtLabel}',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2,
-              color: style.headerForeground,
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.success,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              student.meetingPoint.code,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                color: AppColors.onBrand,
+              ),
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            active.title,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              height: 1.05,
-              color: style.headerForeground,
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  student.meetingPoint.name,
+                  style: AppTextStyles.itemTitle.copyWith(fontSize: 15),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  student.meetingPoint.routeHint,
+                  style: AppTextStyles.caption,
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            active.scope,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: style.headerForeground,
+          const Icon(Icons.chevron_right, color: AppColors.inkMuted),
+        ],
+      ),
+    );
+  }
+}
+
+class _Tile {
+  const _Tile({required this.icon, required this.label, required this.onTap});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+}
+
+class _QuickGrid extends StatelessWidget {
+  const _QuickGrid({required this.tiles});
+
+  final List<_Tile> tiles;
+
+  @override
+  Widget build(BuildContext context) {
+    final double width =
+        (MediaQuery.sizeOf(context).width - AppSpacing.screenGutter * 2 - AppSpacing.sm) / 2;
+
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: <Widget>[
+        for (final _Tile tile in tiles)
+          SizedBox(
+            width: width,
+            child: AppCard(
+              onTap: tile.onTap,
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: SizedBox(
+                height: 76,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    IconBubble(icon: tile.icon, size: 34),
+                    Text(
+                      tile.label,
+                      style: AppTextStyles.itemTitle.copyWith(fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _NextDrillCard extends StatelessWidget {
+  const _NextDrillCard({required this.drill, required this.onTap});
+
+  final Drill drill;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      key: const Key('proximo-simulacro'),
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 44,
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.ink,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+            ),
+            child: Column(
+              children: <Widget>[
+                Text(
+                  Fmt.monthTag(drill.scheduledAt),
+                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white70),
+                ),
+                Text(
+                  '${drill.scheduledAt.day}',
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: AppColors.onBrand),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Próximo simulacro de ${drill.hazard.label.toLowerCase()}',
+                  style: AppTextStyles.itemTitle.copyWith(fontSize: 13),
+                ),
+                Text(
+                  '${Fmt.weekday(drill.scheduledAt)} · ${Fmt.hour(drill.scheduledAt)} · ${drill.scope}',
+                  style: AppTextStyles.caption,
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
-
-  static String _nowLabel() {
-    final DateTime now = DateTime.now();
-    return '${now.hour}:${now.minute.toString().padLeft(2, '0')}';
-  }
 }
 
-/// A dónde le toca ir a esta persona. Es lo primero que se busca en el inicio.
-class _MeetingPointCard extends StatelessWidget {
-  const _MeetingPointCard({required this.student});
+/// «Necesito ayuda»: siempre a un toque, encima de la barra de navegación.
+class _HelpBar extends StatelessWidget {
+  const _HelpBar({required this.onTap});
 
-  final StudentEnrollment student;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        const Text('TU PUNTO DE ENCUENTRO', style: AppTextStyles.eyebrow),
-        const SizedBox(height: AppSpacing.sm),
-        Material(
-          color: AppColors.surface,
-          shape: const Border.fromBorderSide(
-            BorderSide(color: AppColors.border),
-          ),
-          child: InkWell(
-            onTap: () => ShellScope.maybeOf(context)?.openTab('Mapa'),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Row(
-                children: <Widget>[
-                  Container(
-                    width: 38,
-                    height: 38,
-                    color: AppColors.brand,
-                    alignment: Alignment.center,
-                    child: Text(
-                      student.meetingPoint.code,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.onBrand,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          student.meetingPoint.name,
-                          style: AppTextStyles.itemTitle.copyWith(fontSize: 15),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          student.meetingPoint.routeHint,
-                          style: AppTextStyles.caption.copyWith(fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(
-                    Icons.arrow_forward,
-                    size: 18,
-                    color: AppColors.ink,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Reportar una emergencia que el colegio todavía no vio.
-class _ReportButton extends StatelessWidget {
-  const _ReportButton({required this.student});
-
-  final StudentEnrollment student;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.screenGutter,
+        AppSpacing.sm,
+        AppSpacing.screenGutter,
+        AppSpacing.md,
+      ),
       child: Material(
-        color: AppColors.brand,
+        color: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+          side: const BorderSide(color: AppColors.brand),
+        ),
         child: InkWell(
-          onTap: () => _openSheet(context),
-          child: SizedBox(
-            width: double.infinity,
+          key: const Key('necesito-ayuda'),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+          onTap: onTap,
+          child: const SizedBox(
             height: AppSpacing.buttonHeight,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                const Icon(
-                  Icons.campaign_outlined,
-                  size: 20,
-                  color: AppColors.onBrand,
-                ),
-                const SizedBox(width: AppSpacing.sm),
+                Icon(Icons.error_outline, size: 18, color: AppColors.brand),
+                SizedBox(width: AppSpacing.sm),
                 Text(
-                  'REPORTAR EMERGENCIA',
-                  style: AppTextStyles.button.copyWith(
-                    color: AppColors.onBrand,
+                  'Necesito ayuda',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.brand,
                   ),
                 ),
               ],
@@ -342,55 +391,5 @@ class _ReportButton extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Future<void> _openSheet(BuildContext context) async {
-    final Hazard? hazard = await showModalBottomSheet<Hazard>(
-      context: context,
-      // Que pueda usar toda la altura que necesite: con el límite por omisión
-      // (poco más de la mitad) las opciones no caben en un celular bajo.
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: AppColors.surface,
-      builder: (BuildContext context) => const HazardReportSheet(),
-    );
-    if (hazard == null || !context.mounted) {
-      return;
-    }
-
-    // Se toman antes de esperar: después de un `await` el contexto puede ya no
-    // estar, y el mensaje tiene que salir de todos modos.
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    final IncidentRepository? repository =
-        AppScope.of(context).incidentRepository;
-
-    void say(String message) {
-      messenger
-        ..clearSnackBars()
-        ..showSnackBar(SnackBar(content: Text(message)));
-    }
-
-    if (repository == null) {
-      say('No se pudo enviar el reporte. Avisa a tu docente en persona.');
-      return;
-    }
-
-    try {
-      await repository.report(hazard);
-      // Solo se dice «enviado» cuando el servidor lo confirmó. Un reporte de
-      // incendio que parece haber salido y no salió es peor que un error: quien
-      // lo hizo cree que ya avisó, y nadie se entera.
-      say(
-        'Reporte de ${hazard.reportLabel.toLowerCase()} enviado. Tu docente y '
-        'coordinación ya lo ven.',
-      );
-    } catch (error, stack) {
-      ErrorReporter.report(error, stack, context: 'reportar emergencia');
-      say(
-        error is ApiException && error.statusCode != null
-            ? error.message
-            : 'No se pudo enviar el reporte. Avisa a tu docente en persona.',
-      );
-    }
   }
 }

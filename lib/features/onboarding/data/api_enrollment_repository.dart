@@ -3,6 +3,7 @@ import '../../session/domain/session.dart';
 import '../domain/enrollment.dart';
 import '../domain/enrollment_failure.dart';
 import '../domain/personal_code.dart';
+import '../domain/school.dart';
 import 'enrollment_repository.dart';
 import 'profile_mapper.dart';
 
@@ -14,6 +15,21 @@ class ApiEnrollmentRepository implements EnrollmentRepository {
   const ApiEnrollmentRepository(this._api);
 
   final ApiClient _api;
+
+  @override
+  Future<School> findSchool(String schoolCode) async {
+    final Map<String, dynamic> response = await _call(
+      () => _api.post('/school/check', body: <String, dynamic>{'code': schoolCode}),
+    );
+    final Object? school = response['school'];
+    if (school is! Map<String, dynamic>) {
+      throw const EnrollmentUnavailable('el servidor no devolvió el colegio');
+    }
+    return School(
+      name: school['name'] as String? ?? '',
+      city: school['city'] as String? ?? '',
+    );
+  }
 
   @override
   Future<Enrollment> findByCode(PersonalCode code) async {
@@ -63,6 +79,7 @@ class ApiEnrollmentRepository implements EnrollmentRepository {
         'codigo_usado' => const CodeAlreadyUsed(),
         'codigo_invalido' => const CodeNotFound(),
         'codigo_vencido' => const CodeExpired(),
+        'colegio_no_encontrado' => const SchoolNotFound(),
         // Mismo caso que en el inicio de sesión: demasiados intentos desde esta
         // dirección. En el colegio todos salen por la misma, así que un salón
         // registrándose junto puede toparse con esto.

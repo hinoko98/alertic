@@ -44,9 +44,13 @@ class FakeAlertRepository implements AlertRepository {
     // El servidor anota quién leyó la alerta. Aquí solo se simula la llamada.
   }
 
+  /// Lo que la persona le mandó al colegio, para comprobarlo en las pruebas.
+  final List<SafetyReport> submitted = <SafetyReport>[];
+
   @override
   Future<void> submitSafetyReport(SafetyReport report) async {
     await Future<void>.delayed(latency);
+    submitted.add(report);
   }
 
   @override
@@ -81,6 +85,8 @@ class FakeAlertRepository implements AlertRepository {
         routeHint: 'Por el corredor sur',
         distanceMeters: 60,
         walkMinutes: 1,
+        latitude: 5.93345,
+        longitude: -73.62135,
       ),
       MeetingPoint(
         code: 'P2',
@@ -89,6 +95,8 @@ class FakeAlertRepository implements AlertRepository {
         distanceMeters: 120,
         walkMinutes: 2,
         onlyFor: Hazard.inundacion,
+        latitude: 5.9340,
+        longitude: -73.6210,
       ),
     ];
   }
@@ -115,6 +123,7 @@ class FakeAlertRepository implements AlertRepository {
       meetingPoint: draft.meetingPoint ?? (draft.level == AlertLevel.roja ? 'P1' : null),
       instructions: draft.instructions,
       issuedAt: DateTime.now(),
+      isDrill: draft.drill,
     );
 
     _current = alert;

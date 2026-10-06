@@ -71,6 +71,9 @@ class _EmergencyTabState extends State<EmergencyTab> {
       // Los reportes de la comunidad los recarga la propia bandeja.
       case LiveChange.myChildren:
       case LiveChange.incidents:
+      case LiveChange.chat:
+      case LiveChange.riskReports:
+      case LiveChange.myRiskReport:
         break;
     }
   }
@@ -704,7 +707,8 @@ class _HelpRow extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       decoration: BoxDecoration(
-        color: const Color(0xFFFDEDEA),
+        color: AppColors.brandSoft,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
         border: Border.all(color: AppColors.brand),
       ),
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -726,6 +730,32 @@ class _HelpRow extends StatelessWidget {
                   '${request.reportedAt.minute.toString().padLeft(2, '0')}',
                   style: AppTextStyles.caption.copyWith(fontSize: 11),
                 ),
+                if (request.helpKindLabel != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      request.helpKindLabel!,
+                      style: AppTextStyles.itemTitle.copyWith(
+                        fontSize: 12,
+                        color: AppColors.brand,
+                      ),
+                    ),
+                  ),
+                if (request.helpDetails != null && request.helpDetails!.isNotEmpty)
+                  Text(
+                    request.helpDetails!,
+                    style: AppTextStyles.caption.copyWith(fontSize: 11),
+                  ),
+                // Solo coordinación lo recibe: es para que un brigadista sepa
+                // qué atender, no para mostrarlo a quien no debe.
+                if (request.medicalInfo != null && request.medicalInfo!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Info médica: ${request.medicalInfo}',
+                      style: AppTextStyles.caption.copyWith(fontSize: 11),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -741,7 +771,9 @@ class _HelpRow extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.ink,
               side: const BorderSide(color: AppColors.border),
-              shape: const RoundedRectangleBorder(),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+              ),
             ),
             child: const Text(
               'ASIGNAR BRIGADA',

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app_colors.dart';
+import 'app_spacing.dart';
 import 'app_text_styles.dart';
 
 /// Tema único de la app. ALERTIC no tiene modo oscuro: los colores comunican
@@ -20,10 +21,15 @@ abstract final class AppTheme {
       outline: AppColors.border,
     );
 
+    const OutlineInputBorder fieldBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(AppSpacing.radiusSmall)),
+      borderSide: BorderSide(color: AppColors.border),
+    );
+
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: AppColors.surface,
+      scaffoldBackgroundColor: AppColors.background,
       splashFactory: InkRipple.splashFactory,
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.surface,
@@ -45,10 +51,36 @@ abstract final class AppTheme {
         thickness: 1,
         space: 1,
       ),
+      inputDecorationTheme: const InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.surface,
+        border: fieldBorder,
+        enabledBorder: fieldBorder,
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(AppSpacing.radiusSmall)),
+          borderSide: BorderSide(color: AppColors.brand, width: 1.5),
+        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(AppSpacing.radius)),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+      ),
       snackBarTheme: const SnackBarThemeData(
         backgroundColor: AppColors.ink,
         contentTextStyle: TextStyle(color: AppColors.onBrand, fontSize: 13),
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(AppSpacing.radiusSmall)),
+        ),
       ),
     );
   }

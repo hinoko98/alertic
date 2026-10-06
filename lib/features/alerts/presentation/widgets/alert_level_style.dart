@@ -61,7 +61,7 @@ class AlertLevelStyle {
           bodyForeground: AppColors.ink,
           titleSize: 30,
           icon: Icons.warning_amber_rounded,
-          primaryAction: 'ENTENDIDO',
+          primaryAction: 'Entendido',
           footnote: 'Sonido normal de notificación. '
               'Queda en Inicio hasta que se cierre.',
         ),
@@ -73,7 +73,7 @@ class AlertLevelStyle {
           bodyForeground: AppColors.onBrand,
           titleSize: 34,
           icon: Icons.notifications_active_outlined,
-          primaryAction: 'ESTOY LISTO',
+          primaryAction: 'Estoy listo',
           footnote: 'Sonido de alerta y vibración repetida cada 2 minutos.',
         ),
       AlertLevel.roja => const AlertLevelStyle(
@@ -84,8 +84,8 @@ class AlertLevelStyle {
           bodyForeground: AppColors.onBrand,
           titleSize: 44,
           icon: Icons.emergency_share_outlined,
-          primaryAction: 'ESTOY A SALVO',
-          secondaryAction: 'NECESITO AYUDA',
+          primaryAction: 'Estoy a salvo',
+          secondaryAction: 'Necesito ayuda',
           footnote: 'Sirena continua y vibración hasta que respondas. '
               'Ubicación compartida.',
         ),

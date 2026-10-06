@@ -18,6 +18,7 @@ class Alert {
     this.meetingPoint,
     this.coordinatorNote,
     this.issuedBy,
+    this.isDrill = false,
   });
 
   /// Máximos que acepta la app. Un texto más largo no se recorta en pantalla:
@@ -50,6 +51,9 @@ class Alert {
 
   final DateTime issuedAt;
 
+  /// Es un simulacro, no una emergencia: se marca así en todas las pantallas.
+  final bool isDrill;
+
   /// Construye la alerta validando cada campo.
   ///
   /// Lanza [InvalidAlertData] si algo no cuadra. Se usa tanto para los datos
@@ -66,6 +70,7 @@ class Alert {
     String? meetingPoint,
     String? coordinatorNote,
     String? issuedBy,
+    bool isDrill = false,
   }) {
     final String safeId = _requireText(id, 'id', maxLength: 64);
     final String safeTitle = _requireText(title, 'title', maxLength: maxTitleLength);
@@ -109,6 +114,7 @@ class Alert {
       meetingPoint: meetingPoint?.trim(),
       coordinatorNote: _optionalText(coordinatorNote, maxLength: 240),
       issuedBy: _optionalText(issuedBy, maxLength: 80),
+      isDrill: isDrill,
     );
   }
 

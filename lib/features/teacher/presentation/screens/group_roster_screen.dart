@@ -8,6 +8,8 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/design/app_card.dart';
+import '../../../../shared/design/app_page.dart';
 import '../../../alerts/domain/alert.dart';
 import '../../../alerts/domain/live_updates.dart';
 import '../../../onboarding/domain/person_name.dart';
@@ -61,9 +63,9 @@ class _GroupRosterScreenState extends State<GroupRosterScreen> {
 
   Future<void> _load() async {
     try {
-      final List<RosterEntry> entries = await AppScope.of(context)
-          .teacherRepository!
-          .loadRoster(widget.alert.id, widget.grade);
+      final List<RosterEntry> entries = await AppScope.of(
+        context,
+      ).teacherRepository!.loadRoster(widget.alert.id, widget.grade);
       if (mounted) {
         setState(() {
           _entries = entries;
@@ -84,9 +86,9 @@ class _GroupRosterScreenState extends State<GroupRosterScreen> {
 
   Future<void> _markSafe(RosterEntry entry) async {
     try {
-      await AppScope.of(context)
-          .teacherRepository!
-          .markSafe(widget.alert.id, entry.personId);
+      await AppScope.of(
+        context,
+      ).teacherRepository!.markSafe(widget.alert.id, entry.personId);
       await _load();
     } catch (error, stack) {
       ErrorReporter.report(error, stack, context: 'marcar a salvo');
@@ -96,135 +98,117 @@ class _GroupRosterScreenState extends State<GroupRosterScreen> {
         final String message = error is ApiException
             ? error.message
             : 'No se pudo registrar. Intenta otra vez.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final List<RosterEntry> needHelp =
-        _entries.where((RosterEntry e) => e.needsHelp).toList();
-    final List<RosterEntry> pending =
-        _entries.where((RosterEntry e) => !e.hasResponded).toList();
+    final List<RosterEntry> needHelp = _entries
+        .where((RosterEntry e) => e.needsHelp)
+        .toList();
+    final List<RosterEntry> pending = _entries
+        .where((RosterEntry e) => !e.hasResponded)
+        .toList();
     final List<RosterEntry> safe = _entries
         .where((RosterEntry e) => e.hasResponded && !e.needsHelp)
         .toList();
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            _AlertStrip(alert: widget.alert),
-            _Counter(
-              grade: widget.grade,
-              responded: safe.length + needHelp.length,
-              total: _entries.length,
-              safe: safe.length,
-              needHelp: needHelp.length,
-              pending: pending.length,
-            ),
-            Expanded(
-              child: _loading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: AppColors.brand),
-                    )
-                  : _error != null
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.screenGutter),
-                            child: Text(_error!, style: AppTextStyles.body),
-                          ),
-                        )
-                      : ListView(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.screenGutter,
-                            AppSpacing.md,
-                            AppSpacing.screenGutter,
-                            AppSpacing.xl,
-                          ),
-                          children: <Widget>[
-                            for (final RosterEntry entry in needHelp)
-                              _NeedsHelpCard(entry: entry),
-                            if (pending.isNotEmpty) ...<Widget>[
-                              const SizedBox(height: AppSpacing.md),
-                              const Text('SIN RESPUESTA', style: AppTextStyles.eyebrow),
-                              const SizedBox(height: AppSpacing.sm),
-                              for (final RosterEntry entry in pending)
-                                _PendingRow(
-                                  entry: entry,
-                                  onMarkSafe: () => _markSafe(entry),
-                                ),
-                            ],
-                            if (safe.isNotEmpty) ...<Widget>[
-                              const SizedBox(height: AppSpacing.lg),
-                              Text(
-                                'A SALVO · ${safe.length}',
-                                style: AppTextStyles.eyebrow,
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              for (final RosterEntry entry in safe)
-                                _SafeRow(entry: entry),
-                            ],
-                          ],
-                        ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenGutter,
-                0,
-                AppSpacing.screenGutter,
-                AppSpacing.lg,
-              ),
-              child: PrimaryButton(
-                label: 'ENVIAR REPORTE A COORDINACIÓN',
-                background: AppColors.ink,
-                onPressed: () {
-                  ScaffoldMessenger.of(context)
-                    ..clearSnackBars()
-                    ..showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Reporte de ${widget.grade} enviado: '
-                          '${safe.length} a salvo, ${needHelp.length} con ayuda, '
-                          '${pending.length} sin respuesta.',
-                        ),
-                      ),
-                    );
-                },
-              ),
-            ),
-          ],
+    return AppPage(
+      title: 'Lista del grupo',
+      subtitle: '${widget.alert.title} · ${widget.alert.issuedAtLabel}',
+      onBack: () => Navigator.of(context).maybePop(),
+      showHelp: false,
+      bottom: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.screenGutter,
+            AppSpacing.sm,
+            AppSpacing.screenGutter,
+            AppSpacing.md,
+          ),
+          child: PrimaryButton(
+            label: 'ENVIAR REPORTE A COORDINACIÓN',
+            background: AppColors.ink,
+            onPressed: () {
+              ScaffoldMessenger.of(context)
+                ..clearSnackBars()
+                ..showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Reporte de ${widget.grade} enviado: '
+                      '${safe.length} a salvo, ${needHelp.length} con ayuda, '
+                      '${pending.length} sin respuesta.',
+                    ),
+                  ),
+                );
+            },
+          ),
         ),
       ),
-    );
-  }
-}
-
-class _AlertStrip extends StatelessWidget {
-  const _AlertStrip({required this.alert});
-
-  final Alert alert;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: AppColors.levelRed,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.screenGutter,
-        vertical: AppSpacing.sm,
-      ),
-      child: Text(
-        'ALERTA ${alert.level.label} · ${alert.title} · ${alert.issuedAtLabel}',
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.2,
-          color: AppColors.onBrand,
-        ),
+      body: Column(
+        children: <Widget>[
+          _Counter(
+            grade: widget.grade,
+            responded: safe.length + needHelp.length,
+            total: _entries.length,
+            safe: safe.length,
+            needHelp: needHelp.length,
+            pending: pending.length,
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.brand),
+                  )
+                : _error != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.screenGutter),
+                      child: Text(_error!, style: AppTextStyles.body),
+                    ),
+                  )
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.screenGutter,
+                      AppSpacing.md,
+                      AppSpacing.screenGutter,
+                      AppSpacing.xl,
+                    ),
+                    children: <Widget>[
+                      for (final RosterEntry entry in needHelp)
+                        _NeedsHelpCard(entry: entry),
+                      if (pending.isNotEmpty) ...<Widget>[
+                        const SizedBox(height: AppSpacing.md),
+                        const Text(
+                          'SIN RESPUESTA',
+                          style: AppTextStyles.eyebrow,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        for (final RosterEntry entry in pending)
+                          _PendingRow(
+                            entry: entry,
+                            onMarkSafe: () => _markSafe(entry),
+                          ),
+                      ],
+                      if (safe.isNotEmpty) ...<Widget>[
+                        const SizedBox(height: AppSpacing.lg),
+                        Text(
+                          'A SALVO · ${safe.length}',
+                          style: AppTextStyles.eyebrow,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        for (final RosterEntry entry in safe)
+                          _SafeRow(entry: entry),
+                      ],
+                    ],
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -266,9 +250,7 @@ class _Counter extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: <Widget>[
-              Expanded(
-                child: Text(grade, style: AppTextStyles.screenTitle),
-              ),
+              Expanded(child: Text(grade, style: AppTextStyles.screenTitle)),
               Text(
                 '$responded',
                 style: const TextStyle(
@@ -288,12 +270,17 @@ class _Counter extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          SizedBox(
-            height: 6,
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: AppColors.border,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.brand),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: SizedBox(
+              height: 6,
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: AppColors.border,
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.success,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -325,30 +312,30 @@ class _NeedsHelpCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFDEDEA),
-        border: Border.all(color: AppColors.brand),
-      ),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        children: <Widget>[
-          const Icon(Icons.error_outline, color: AppColors.brand, size: 20),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  PersonName.short(entry.fullName),
-                  style: AppTextStyles.itemTitle,
-                ),
-                Text('Necesita ayuda', style: AppTextStyles.caption),
-              ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: AppCard(
+        color: AppColors.brandSoft,
+        borderColor: AppColors.brand,
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: <Widget>[
+            const Icon(Icons.error_outline, color: AppColors.brand, size: 20),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    PersonName.short(entry.fullName),
+                    style: AppTextStyles.itemTitle,
+                  ),
+                  Text('Necesita ayuda', style: AppTextStyles.caption),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -379,7 +366,9 @@ class _PendingRow extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.ink,
               side: const BorderSide(color: AppColors.border),
-              shape: const RoundedRectangleBorder(),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+              ),
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             ),
             child: const Text(
@@ -404,7 +393,11 @@ class _SafeRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: Row(
         children: <Widget>[
-          const Icon(Icons.check, size: 16, color: AppColors.brand),
+          const Icon(
+            Icons.check_circle_outline,
+            size: 16,
+            color: AppColors.success,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
@@ -416,7 +409,7 @@ class _SafeRow extends StatelessWidget {
             entry.location == null
                 ? ''
                 : '${entry.reportedAt?.hour ?? 0}:'
-                    '${(entry.reportedAt?.minute ?? 0).toString().padLeft(2, '0')}',
+                      '${(entry.reportedAt?.minute ?? 0).toString().padLeft(2, '0')}',
             style: AppTextStyles.caption.copyWith(fontSize: 11),
           ),
         ],

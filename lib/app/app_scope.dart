@@ -1,15 +1,21 @@
 import 'package:flutter/widgets.dart';
 
+import '../core/location/location_service.dart';
+
 import '../core/network/server_status.dart';
 import '../core/notifications/device_registrar.dart';
 import '../core/notifications/notification_service.dart';
+import '../features/account/domain/account_repository.dart';
 import '../features/alerts/domain/alert_repository.dart';
+import '../features/drills/domain/drill_repository.dart';
+import '../features/risks/domain/risk_repository.dart';
 import '../features/alerts/domain/live_updates.dart';
 import '../features/guardian/domain/guardian_repository.dart';
 import '../features/incidents/domain/incident.dart';
 import '../features/onboarding/data/credentials_repository.dart';
 import '../features/onboarding/data/enrollment_repository.dart';
 import '../features/panel/domain/panel_repository.dart';
+import '../features/support/domain/support_repository.dart';
 import '../features/teacher/domain/teacher_repository.dart';
 import '../features/session/domain/session_store.dart';
 
@@ -33,6 +39,11 @@ class AppScope extends InheritedWidget {
     this.teacherRepository,
     this.guardianRepository,
     this.panelRepository,
+    this.supportRepository,
+    this.accountRepository,
+    this.drillRepository,
+    this.riskRepository,
+    this.locationService = const NoLocationService(),
     super.key,
   });
 
@@ -75,6 +86,22 @@ class AppScope extends InheritedWidget {
   /// entrada. En la app móvil es nulo.
   final PanelRepository? panelRepository;
 
+  /// El chat con el soporte del colegio. Lo usan los cuatro roles, cada uno por
+  /// su lado.
+  final SupportRepository? supportRepository;
+
+  /// Ajustes, contactos de familia e historial de avisos de cada persona.
+  final AccountRepository? accountRepository;
+
+  /// Simulacros programados y sus resultados.
+  final DrillRepository? drillRepository;
+
+  /// Reportes de riesgo: una grieta, un cable suelto.
+  final RiskRepository? riskRepository;
+
+  /// La ubicación del celular, para el mapa y la ruta en vivo. Por omisión no hay.
+  final LocationService locationService;
+
   static AppScope of(BuildContext context) {
     final AppScope? scope =
         context.dependOnInheritedWidgetOfExactType<AppScope>();
@@ -95,5 +122,10 @@ class AppScope extends InheritedWidget {
       oldWidget.incidentRepository != incidentRepository ||
       oldWidget.teacherRepository != teacherRepository ||
       oldWidget.guardianRepository != guardianRepository ||
-      oldWidget.panelRepository != panelRepository;
+      oldWidget.panelRepository != panelRepository ||
+      oldWidget.supportRepository != supportRepository ||
+      oldWidget.accountRepository != accountRepository ||
+      oldWidget.drillRepository != drillRepository ||
+      oldWidget.riskRepository != riskRepository ||
+      oldWidget.locationService != locationService;
 }

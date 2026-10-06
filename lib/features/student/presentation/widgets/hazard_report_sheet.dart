@@ -38,7 +38,7 @@ class HazardReportSheet extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const Text('¿QUÉ VISTE?', style: AppTextStyles.screenTitle),
+                  const Text('¿Qué viste?', style: AppTextStyles.screenTitle),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     'Le llega a tu director de grupo y a coordinación. '

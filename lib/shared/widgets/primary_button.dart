@@ -4,8 +4,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 
-/// botón de acción principal: rectangulo solido, etiqueta a la izquierda y un
-/// icono al extremo derecho. Es el único botón relleno de cada pantalla.
+/// Botón de acción principal: relleno, esquinas suaves, etiqueta centrada y un
+/// icono opcional. Es el único botón relleno de cada pantalla.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     required this.label,
@@ -32,24 +32,29 @@ class PrimaryButton extends StatelessWidget {
     final bool enabled = onPressed != null && !isLoading;
 
     return Opacity(
-      opacity: enabled ? 1 : 0.35,
+      opacity: enabled ? 1 : 0.4,
       child: Material(
         color: background,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
         child: InkWell(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
           onTap: enabled ? onPressed : null,
           child: SizedBox(
             height: AppSpacing.buttonHeight,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  Expanded(
+                  Flexible(
                     child: Text(
                       label,
+                      overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.button.copyWith(color: foreground),
                     ),
                   ),
-                  if (isLoading)
+                  if (isLoading) ...<Widget>[
+                    const SizedBox(width: AppSpacing.sm),
                     SizedBox(
                       width: 18,
                       height: 18,
@@ -57,9 +62,11 @@ class PrimaryButton extends StatelessWidget {
                         strokeWidth: 2,
                         color: foreground,
                       ),
-                    )
-                  else if (icon != null)
-                    Icon(icon, size: 20, color: foreground),
+                    ),
+                  ] else if (icon != null) ...<Widget>[
+                    const SizedBox(width: AppSpacing.sm),
+                    Icon(icon, size: 18, color: foreground),
+                  ],
                 ],
               ),
             ),

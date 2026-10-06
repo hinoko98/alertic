@@ -12,11 +12,14 @@ import '../../../session/domain/session.dart';
 import '../../domain/credentials.dart';
 import '../../domain/enrollment_failure.dart';
 
-/// «Ya tengo cuenta»: la entrada de docentes y administradores.
+/// «Ya tengo cuenta»: la entrada de docentes y coordinación.
 ///
 /// Es la **única** forma de entrar para ellos. No hay código impreso para quien
 /// puede emitir una alerta a 1.248 personas: un papel se queda sobre un
 /// escritorio, se fotografía y no se puede cambiar. Una contraseña sí.
+///
+/// Se ve distinta a propósito —encabezado oscuro— para que nadie la confunda con
+/// el registro de estudiantes y acudientes.
 class SignInScreen extends StatefulWidget {
   const SignInScreen({this.onSignedIn, this.showBack = true, super.key});
 
@@ -53,9 +56,7 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _signIn() async {
-    if (_isSigningIn) {
-      return;
-    }
+    if (_isSigningIn) return;
 
     final (Credentials? credentials, String? problem) = Credentials.tryBuild(
       email: _email.text,
@@ -76,14 +77,10 @@ class _SignInScreenState extends State<SignInScreen> {
       final AppScope scope = AppScope.of(context);
       final NavigatorState navigator = Navigator.of(context);
 
-      final Session session = await scope.credentialsRepository.signIn(
-        credentials,
-      );
+      final Session session = await scope.credentialsRepository.signIn(credentials);
       await scope.sessionStore.save(session);
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       final void Function(Session session)? onSignedIn = widget.onSignedIn;
       if (onSignedIn != null) {
@@ -96,206 +93,233 @@ class _SignInScreenState extends State<SignInScreen> {
       await navigator.pushNamed(AppRoutes.permissions);
     } on EnrollmentFailure catch (failure, stack) {
       ErrorReporter.report(failure, stack, context: 'iniciar sesión');
-      if (mounted) {
-        setState(() => _error = failure.message);
-      }
+      if (mounted) setState(() => _error = failure.message);
     } catch (error, stack) {
       ErrorReporter.report(error, stack, context: 'iniciar sesión');
-      if (mounted) {
-        setState(() => _error = 'No pudimos entrar. Intenta otra vez.');
-      }
+      if (mounted) setState(() => _error = 'No pudimos entrar. Intenta otra vez.');
     } finally {
-      if (mounted) {
-        setState(() => _isSigningIn = false);
-      }
+      if (mounted) setState(() => _isSigningIn = false);
     }
+  }
+
+  void _clearError() {
+    if (_error != null) setState(() => _error = null);
   }
 
   @override
   Widget build(BuildContext context) {
     // Con el teclado abierto, en un celular quedan unos 200 puntos de pantalla: el
-    // botón fijo abajo se comía el campo de la contraseña y no se veía lo que se
-    // escribía. Con el teclado arriba, el botón pasa a ser parte del formulario y
-    // baja con él.
+    // botón fijo abajo se comía el campo de la contraseña. Con el teclado
+    // arriba, el botón pasa a ser parte del formulario y baja con él.
     final bool keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final Widget enterButton = PrimaryButton(
-      label: 'ENTRAR',
+      label: 'Entrar',
+      icon: null,
+      background: AppColors.ink,
       isLoading: _isSigningIn,
       onPressed: _signIn,
     );
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        leading: widget.showBack
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.ink),
-                onPressed: _isSigningIn
-                    ? null
-                    : () => Navigator.of(context).pop(),
-              )
-            : null,
-      ),
-      body: SafeArea(
+      backgroundColor: AppColors.surface,
+      body: Center(
         // En el computador de coordinación el formulario no se estira a todo el
-        // ancho de la pantalla: un campo de correo de 1.200 puntos no se lee. En
-        // el celular, 480 es más que el ancho disponible y no cambia nada.
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Column(
-              children: <Widget>[
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.screenGutter,
-                      0,
-                      AppSpacing.screenGutter,
-                      AppSpacing.xl,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const ServerStatusBadge(),
-                        const SizedBox(height: AppSpacing.md),
-                        Text(
-                          'DOCENTES Y COORDINACIÓN',
-                          style: AppTextStyles.eyebrow.copyWith(
-                            color: AppColors.brand,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        const Text(
-                          'INICIAR SESIÓN',
-                          style: AppTextStyles.screenTitle,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          'Con la cuenta que te dio el colegio. Si eres estudiante '
-                          'o acudiente, vuelve atrás y usa tu código del carné.',
-                          style: AppTextStyles.caption,
-                        ),
-                        const SizedBox(height: AppSpacing.xl),
-
-                        const _FieldLabel('Correo'),
-                        TextField(
-                          controller: _email,
-                          enabled: !_isSigningIn,
-                          keyboardType: TextInputType.emailAddress,
-                          // El teclado del celular pone mayúscula al inicio y
-                          // autocorrige: las dos cosas rompen un correo.
-                          textCapitalization: TextCapitalization.none,
-                          autocorrect: false,
-                          autofillHints: const <String>[AutofillHints.username],
-                          textInputAction: TextInputAction.next,
-                          onSubmitted: (_) => _passwordFocus.requestFocus(),
-                          onChanged: (_) => _clearError(),
-                          decoration: _decoration('nombre@iic.edu.co'),
-                          style: AppTextStyles.body,
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-
-                        const _FieldLabel('Contraseña'),
-                        TextField(
-                          controller: _password,
-                          focusNode: _passwordFocus,
-                          enabled: !_isSigningIn,
-                          obscureText: !_showPassword,
-                          autocorrect: false,
-                          enableSuggestions: false,
-                          autofillHints: const <String>[AutofillHints.password],
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _signIn(),
-                          onChanged: (_) => _clearError(),
-                          decoration: _decoration('').copyWith(
-                            // Poder verla evita el error más común de escribir una
-                            // contraseña larga en un teclado de celular, y la
-                            // decisión de mostrarla es de quien la escribe.
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _showPassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                size: 20,
-                                color: AppColors.inkMuted,
-                              ),
-                              tooltip: _showPassword ? 'Ocultar' : 'Mostrar',
-                              onPressed: () => setState(
-                                () => _showPassword = !_showPassword,
-                              ),
+        // ancho de la pantalla. En el celular, 480 es más que el ancho disponible.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Column(
+            children: <Widget>[
+              _DarkHeader(
+                showBack: widget.showBack,
+                onBack: _isSigningIn ? null : () => Navigator.of(context).pop(),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.screenGutter,
+                    AppSpacing.lg,
+                    AppSpacing.screenGutter,
+                    AppSpacing.xl,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const ServerStatusBadge(),
+                      const SizedBox(height: AppSpacing.md),
+                      const _FieldLabel('Correo institucional'),
+                      TextField(
+                        controller: _email,
+                        enabled: !_isSigningIn,
+                        keyboardType: TextInputType.emailAddress,
+                        // El teclado del celular pone mayúscula al inicio y
+                        // autocorrige: las dos cosas rompen un correo.
+                        textCapitalization: TextCapitalization.none,
+                        autocorrect: false,
+                        autofillHints: const <String>[AutofillHints.username],
+                        textInputAction: TextInputAction.next,
+                        onSubmitted: (_) => _passwordFocus.requestFocus(),
+                        onChanged: (_) => _clearError(),
+                        decoration: const InputDecoration(hintText: 'nombre@colegio.edu.co'),
+                        style: AppTextStyles.body,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      const _FieldLabel('Contraseña'),
+                      TextField(
+                        controller: _password,
+                        focusNode: _passwordFocus,
+                        enabled: !_isSigningIn,
+                        obscureText: !_showPassword,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        autofillHints: const <String>[AutofillHints.password],
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _signIn(),
+                        onChanged: (_) => _clearError(),
+                        decoration: InputDecoration(
+                          // Poder verla evita el error más común de escribir una
+                          // contraseña larga en un teclado de celular, y la
+                          // decisión de mostrarla es de quien la escribe.
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _showPassword
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              size: 20,
+                              color: AppColors.inkMuted,
                             ),
+                            tooltip: _showPassword ? 'Ocultar' : 'Mostrar',
+                            onPressed: () =>
+                                setState(() => _showPassword = !_showPassword),
                           ),
-                          style: AppTextStyles.body,
                         ),
-
-                        if (_error != null) ...<Widget>[
-                          const SizedBox(height: AppSpacing.md),
-                          _ErrorNote(message: _error!),
-                        ],
-
-                        const SizedBox(height: AppSpacing.lg),
-                        Text(
-                          '¿Olvidaste la contraseña? Pídele a coordinación que te '
-                          'la restablezca.',
-                          style: AppTextStyles.caption,
-                        ),
-                        if (keyboardOpen) ...<Widget>[
-                          const SizedBox(height: AppSpacing.lg),
-                          enterButton,
-                        ],
+                        style: AppTextStyles.body,
+                      ),
+                      if (_error != null) ...<Widget>[
+                        const SizedBox(height: AppSpacing.md),
+                        _ErrorNote(message: _error!),
                       ],
-                    ),
+                      const SizedBox(height: AppSpacing.md),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          '¿Olvidaste tu contraseña? Pídele a coordinación que '
+                          'la restablezca.',
+                          textAlign: TextAlign.right,
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.brand,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      if (keyboardOpen) ...<Widget>[
+                        const SizedBox(height: AppSpacing.lg),
+                        enterButton,
+                      ],
+                    ],
                   ),
                 ),
-                if (!keyboardOpen)
-                  Padding(
+              ),
+              if (!keyboardOpen)
+                SafeArea(
+                  top: false,
+                  child: Padding(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.screenGutter,
                       0,
                       AppSpacing.screenGutter,
                       AppSpacing.lg,
                     ),
-                    child: enterButton,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Icon(Icons.info_outline, size: 14, color: AppColors.inkFaint),
+                            SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                'Solo para docentes y responsables de ALERTIC en '
+                                'la institución. Si eres estudiante o acudiente, '
+                                'vuelve atrás y usa el código de tu carné.',
+                                style: TextStyle(fontSize: 11, color: AppColors.inkMuted),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        enterButton,
+                      ],
+                    ),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
       ),
     );
   }
+}
 
-  /// El error se va en cuanto la persona empieza a corregir.
-  void _clearError() {
-    if (_error != null) {
-      setState(() => _error = null);
-    }
-  }
+class _DarkHeader extends StatelessWidget {
+  const _DarkHeader({required this.showBack, required this.onBack});
 
-  InputDecoration _decoration(String hint) {
-    return InputDecoration(
-      hintText: hint.isEmpty ? null : hint,
-      hintStyle: AppTextStyles.caption,
-      isDense: true,
-      contentPadding: const EdgeInsets.all(AppSpacing.md),
-      border: const OutlineInputBorder(
-        borderRadius: BorderRadius.zero,
-        borderSide: BorderSide(color: AppColors.border),
-      ),
-      enabledBorder: const OutlineInputBorder(
-        borderRadius: BorderRadius.zero,
-        borderSide: BorderSide(color: AppColors.border),
-      ),
-      focusedBorder: const OutlineInputBorder(
-        borderRadius: BorderRadius.zero,
-        borderSide: BorderSide(color: AppColors.brand, width: 2),
-      ),
-      disabledBorder: const OutlineInputBorder(
-        borderRadius: BorderRadius.zero,
-        borderSide: BorderSide(color: AppColors.border),
+  final bool showBack;
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: AppColors.ink,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.screenGutter,
+            AppSpacing.md,
+            AppSpacing.screenGutter,
+            AppSpacing.xl,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (showBack)
+                InkResponse(
+                  onTap: onBack,
+                  radius: 22,
+                  child: const Icon(Icons.arrow_back_ios_new, size: 18, color: AppColors.onBrand),
+                )
+              else
+                const SizedBox(height: 18),
+              const SizedBox(height: AppSpacing.lg),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.brand,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.lock_outline, size: 22, color: AppColors.onBrand),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              const Text(
+                'Docentes y coordinación',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.4,
+                  color: AppColors.onBrand,
+                ),
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                'Ingreso fijo, sin código de un solo uso.',
+                style: TextStyle(fontSize: 12, color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -310,7 +334,7 @@ class _FieldLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: Text(text, style: AppTextStyles.eyebrow),
+      child: Text(text.toUpperCase(), style: AppTextStyles.eyebrow),
     );
   }
 }

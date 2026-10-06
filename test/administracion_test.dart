@@ -339,8 +339,8 @@ void main() {
       expect(find.text('Carlos Jaimes Duarte'), findsOneWidget);
       expect(find.text('carlos.jaimes@iic.edu.co'), findsOneWidget);
       expect(find.text('10° A, 10° B'), findsOneWidget);
-      expect(find.text('CAMBIAR CONTRASEÑA'), findsOneWidget);
-      expect(find.text('CERRAR SESIÓN'), findsOneWidget);
+      expect(find.byKey(const Key('cambiar-contrasena')), findsOneWidget);
+      expect(find.byKey(const Key('cerrar-sesion')), findsOneWidget);
     });
 
     testWidgets('salir pregunta primero, y cancelar no cierra nada', (
@@ -348,7 +348,7 @@ void main() {
     ) async {
       await pumpAccount(tester, carlos);
 
-      await tester.tap(find.text('CERRAR SESIÓN'));
+      await tester.tap(find.byKey(const Key('cerrar-sesion')));
       await tester.pumpAndSettle();
       expect(find.text('¿Cerrar sesión?'), findsOneWidget);
       // A un docente se le dice con qué vuelve a entrar, no que necesita un código.
@@ -358,7 +358,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('PANTALLA DE BIENVENIDA'), findsNothing);
-      expect(find.text('TU CUENTA'), findsOneWidget);
+      expect(find.text('Tu cuenta'), findsOneWidget);
     });
 
     testWidgets('confirmar borra la sesión y vuelve al inicio', (
@@ -374,7 +374,7 @@ void main() {
       );
       await pumpAccount(tester, carlos, store: store);
 
-      await tester.tap(find.text('CERRAR SESIÓN'));
+      await tester.tap(find.byKey(const Key('cerrar-sesion')));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(TextButton, 'CERRAR SESIÓN'));
       await tester.pumpAndSettle();
@@ -398,18 +398,24 @@ void main() {
         ),
       );
 
-      expect(find.text('CAMBIAR CONTRASEÑA'), findsNothing);
+      expect(find.byKey(const Key('cambiar-contrasena')), findsNothing);
       expect(find.text('310 ••• 4521'), findsOneWidget);
       expect(find.text('Laura Camila Pérez Gómez'), findsOneWidget);
 
-      await tester.tap(find.text('CERRAR SESIÓN'));
+      await tester.tap(find.byKey(const Key('cerrar-sesion')));
       await tester.pumpAndSettle();
-      expect(find.textContaining('código nuevo'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.textContaining('código nuevo'),
+        ),
+        findsOneWidget,
+      );
     });
 
     group('cambiar la contraseña', () {
       Future<void> openSheet(WidgetTester tester) async {
-        await tester.tap(find.text('CAMBIAR CONTRASEÑA'));
+        await tester.tap(find.byKey(const Key('cambiar-contrasena')));
         await tester.pumpAndSettle();
       }
 
@@ -470,7 +476,7 @@ void main() {
 
         expect(find.text('La contraseña actual no es correcta.'), findsOneWidget);
         // Sigue abierta: quien se equivocó puede corregir sin volver a empezar.
-        expect(find.text('Cambiar contraseña'), findsOneWidget);
+        expect(find.byType(BottomSheet), findsOneWidget);
       });
 
       testWidgets('al lograrlo se cierra la hoja y se avisa', (WidgetTester tester) async {
@@ -484,7 +490,7 @@ void main() {
           confirm: 'Una-Clave-Larga-1',
         );
 
-        expect(find.text('Cambiar contraseña'), findsNothing);
+        expect(find.byType(BottomSheet), findsNothing);
         expect(find.textContaining('Contraseña cambiada'), findsOneWidget);
       });
     });

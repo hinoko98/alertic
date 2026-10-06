@@ -307,12 +307,18 @@ class MeetingPointDraft {
     this.distanceMeters = 0,
     this.walkMinutes = 0,
     this.onlyFor,
+    this.latitude,
+    this.longitude,
   });
 
   final String name;
   final String routeHint;
   final int distanceMeters;
   final int walkMinutes;
+
+  /// Dónde está en el mapa. Van juntas o ninguna; null las quita.
+  final double? latitude;
+  final double? longitude;
 
   /// Si solo vale para una amenaza (la zona alta, en una inundación).
   final Hazard? onlyFor;
@@ -323,6 +329,8 @@ class MeetingPointDraft {
         'distanceMeters': distanceMeters,
         'walkMinutes': walkMinutes,
         'onlyFor': onlyFor?.wire,
+        'latitude': latitude,
+        'longitude': longitude,
       };
 }
 

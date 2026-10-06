@@ -23,6 +23,20 @@ enum ReportedLocation {
   final String label;
 }
 
+/// Qué pasa, cuando alguien pide ayuda. Opciones cerradas, como todo lo que sale
+/// del celular en una emergencia.
+enum HelpKind {
+  injured(wire: 'herido', label: 'Estoy herido'),
+  trapped(wire: 'atrapado', label: 'Estoy atrapado'),
+  someoneElse(wire: 'otra_persona', label: 'Otra persona'),
+  other(wire: 'otra_cosa', label: 'Otra cosa');
+
+  const HelpKind({required this.wire, required this.label});
+
+  final String wire;
+  final String label;
+}
+
 /// Lo que la persona le manda al colegio durante una alerta.
 class SafetyReport {
   const SafetyReport({
@@ -31,6 +45,8 @@ class SafetyReport {
     required this.location,
     required this.reportedAt,
     this.coordinates,
+    this.helpKind,
+    this.helpDetails,
   });
 
   final String alertId;
@@ -41,6 +57,12 @@ class SafetyReport {
   /// Ubicación del GPS, si la persona la autorizó. Es opcional a propósito: el
   /// reporte vale igual sin ella, y sin permiso no se manda nada.
   final GeoPoint? coordinates;
+
+  /// Qué pasa, si pide ayuda.
+  final HelpKind? helpKind;
+
+  /// Una frase corta que escribió quien pide ayuda: «me torcí el tobillo».
+  final String? helpDetails;
 }
 
 /// Un punto del GPS con su margen de error.

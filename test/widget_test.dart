@@ -14,7 +14,7 @@ void main() {
 
     test('rechaza códigos incompletos o con caracteres de más', () {
       expect(PersonalCode.tryParse('7K4P'), isNull);
-      expect(PersonalCode.tryParse('7K4P2Q9M1'), isNull);
+      expect(PersonalCode.tryParse('IICB7K4P1'), isNull);
     });
   });
 
@@ -32,9 +32,9 @@ void main() {
 
     Future<void> goToCodeScreen(WidgetTester tester) async {
       await pumpApp(tester);
-      await tester.tap(find.text('EMPEZAR'));
+      await tester.tap(find.text('Empezar'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('SIGUIENTE'));
+      await tester.tap(find.text('Continuar'));
       await tester.pumpAndSettle();
     }
 
@@ -52,22 +52,22 @@ void main() {
       await pumpApp(tester);
       expect(find.text('ALERTIC'), findsOneWidget);
 
-      await tester.tap(find.text('EMPEZAR'));
+      await tester.tap(find.text('Empezar'));
       await tester.pumpAndSettle();
-      expect(find.text('ASÍ FUNCIONA'), findsOneWidget);
+      expect(find.text('¿Quién eres en el colegio?'), findsOneWidget);
 
-      await tester.tap(find.text('SIGUIENTE'));
+      await tester.tap(find.text('Continuar'));
       await tester.pumpAndSettle();
-      expect(find.text('TU CÓDIGO'), findsOneWidget);
+      expect(find.text('Tu código de acceso'), findsOneWidget);
     });
 
     testWidgets('un código de estudiante muestra sus datos y acudientes', (
       WidgetTester tester,
     ) async {
       await goToCodeScreen(tester);
-      await enterCode(tester, '7K4P2Q9M');
+      await enterCode(tester, 'IICB7K4P');
 
-      expect(find.text('¿ERES TÚ?'), findsOneWidget);
+      expect(find.text('¿Eres tú?'), findsOneWidget);
       expect(find.text('ESTUDIANTE'), findsOneWidget);
       expect(find.text('Laura Camila Pérez Gómez'), findsOneWidget);
       expect(find.text('10° B · Mañana'), findsOneWidget);
@@ -79,7 +79,7 @@ void main() {
       WidgetTester tester,
     ) async {
       await goToCodeScreen(tester);
-      await enterCode(tester, '3HW8X4LD');
+      await enterCode(tester, 'IICB3HW8');
 
       expect(find.text('ACUDIENTE'), findsOneWidget);
       expect(find.text('Martha Gómez Ardila'), findsOneWidget);
@@ -93,12 +93,12 @@ void main() {
       WidgetTester tester,
     ) async {
       await goToCodeScreen(tester);
-      await enterCode(tester, '7K4P2Q9M');
+      await enterCode(tester, 'IICB7K4P');
 
-      await tester.tap(find.text('SÍ, SOY YO'));
+      await tester.tap(find.text('Sí, soy yo'));
       await tester.pumpAndSettle();
 
-      expect(find.text('ÚLTIMO PASO'), findsOneWidget);
+      expect(find.text('Para avisarte a tiempo necesitamos dos permisos'), findsOneWidget);
       expect(find.text('Alertas críticas'), findsOneWidget);
     });
 
@@ -106,33 +106,62 @@ void main() {
       WidgetTester tester,
     ) async {
       await goToCodeScreen(tester);
-      await enterCode(tester, 'ZZZZ9999');
+      await enterCode(tester, 'IICBZZZZ');
 
-      expect(find.text('¿ERES TÚ?'), findsNothing);
+      expect(find.text('¿Eres tú?'), findsNothing);
       expect(
         find.textContaining('no aparece en la matrícula'),
         findsOneWidget,
       );
     });
 
+    testWidgets('un código de colegio que no existe se dice antes de pedir el personal', (
+      WidgetTester tester,
+    ) async {
+      await goToCodeScreen(tester);
+
+      await tester.enterText(find.byKey(const Key('codigo-colegio')), 'ZZZZ');
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('error-colegio')), findsOneWidget);
+      expect(find.textContaining('código de colegio no existe'), findsOneWidget);
+      expect(find.byKey(const Key('colegio-confirmado')), findsNothing);
+      // El personal ni se deja escribir todavía.
+      final TextField personal = tester.widget(find.byKey(const Key('codigo-personal')));
+      expect(personal.enabled, isFalse);
+    });
+
+    testWidgets('al escribir el código del colegio aparece su nombre', (
+      WidgetTester tester,
+    ) async {
+      await goToCodeScreen(tester);
+
+      await tester.enterText(find.byKey(const Key('codigo-colegio')), 'iicb');
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('colegio-confirmado')), findsOneWidget);
+      expect(find.text('Instituto Integrado de Comercio'), findsOneWidget);
+      expect(find.text('Barbosa, Santander'), findsOneWidget);
+    });
+
     testWidgets('un código ya usado no sirve una segunda vez', (
       WidgetTester tester,
     ) async {
       await goToCodeScreen(tester);
-      await enterCode(tester, '7K4P2Q9M');
+      await enterCode(tester, 'IICB7K4P');
 
       // Se confirma una vez: el código queda quemado.
-      await tester.tap(find.text('SÍ, SOY YO'));
+      await tester.tap(find.text('Sí, soy yo'));
       await tester.pumpAndSettle();
-      expect(find.text('ÚLTIMO PASO'), findsOneWidget);
+      expect(find.text('Para avisarte a tiempo necesitamos dos permisos'), findsOneWidget);
 
       // Se vuelve a la pantalla del código, que conserva lo escrito, y se
       // intenta validar el mismo código otra vez.
-      Navigator.of(tester.element(find.text('ÚLTIMO PASO')))
+      Navigator.of(tester.element(find.text('Para avisarte a tiempo necesitamos dos permisos')))
         ..pop()
         ..pop();
       await tester.pumpAndSettle();
-      await tester.tap(find.text('VALIDAR CÓDIGO'));
+      await tester.tap(find.text('Validar código'));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('ya se usó en otro celular'), findsOneWidget);

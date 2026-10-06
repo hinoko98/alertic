@@ -30,6 +30,15 @@ final class CodeAlreadyUsed extends EnrollmentFailure {
         );
 }
 
+/// El código del colegio no existe: los cuatro primeros caracteres del carné.
+final class SchoolNotFound extends EnrollmentFailure {
+  const SchoolNotFound()
+      : super(
+          'Ese código de colegio no existe. Son los cuatro primeros '
+          'caracteres de tu carné.',
+        );
+}
+
 /// El código no se usó dentro de su hora y venció.
 final class CodeExpired extends EnrollmentFailure {
   const CodeExpired()

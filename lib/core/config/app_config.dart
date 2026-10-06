@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// Cómo arranca la app.
 ///
 /// **Siempre habla con el servidor del colegio.** No hay modo de prueba: lo que
@@ -11,10 +9,10 @@ import 'package:flutter/foundation.dart';
 /// flutter run --dart-define=ALERTIC_API=http://192.168.1.10:3000
 /// ```
 ///
-/// Sin ella se usa la que sirve para desarrollar en este mismo computador: el
-/// emulador de Android ve el computador como `10.0.2.2`; el navegador y Windows,
-/// como `localhost`. Un celular real necesita su propia dirección (por USB con
-/// `adb reverse`, o la IP del computador en el wifi): ver el README.
+/// Sin ella se usa `localhost:3000`, que en Android funciona con el túnel USB
+/// (`adb reverse tcp:3000 tcp:3000`) tanto en un celular real como en el
+/// emulador, y directamente en el navegador y Windows. Para llegar por wifi se
+/// pasa la IP del computador: ver el README.
 abstract final class AppConfig {
   static const String _configured = String.fromEnvironment('ALERTIC_API');
 
@@ -22,9 +20,6 @@ abstract final class AppConfig {
   static String get apiBaseUrl {
     if (_configured.isNotEmpty) {
       return _configured;
-    }
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:3000';
     }
     return 'http://localhost:3000';
   }

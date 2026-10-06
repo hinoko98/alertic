@@ -16,10 +16,18 @@ abstract final class AppTextStyles {
 
   /// Titulo de pantalla: "ASÍ FUNCIONA", "TU CÓDIGO".
   static const TextStyle screenTitle = TextStyle(
-    fontSize: 30,
+    fontSize: 26,
     fontWeight: FontWeight.w900,
-    height: 1.05,
-    letterSpacing: -0.8,
+    height: 1.1,
+    letterSpacing: -0.6,
+    color: AppColors.ink,
+  );
+
+  /// Título de la barra superior de una pantalla.
+  static const TextStyle headerTitle = TextStyle(
+    fontSize: 17,
+    fontWeight: FontWeight.w800,
+    height: 1.2,
     color: AppColors.ink,
   );
 
@@ -53,9 +61,9 @@ abstract final class AppTextStyles {
 
   /// Texto de los botones de acción.
   static const TextStyle button = TextStyle(
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: FontWeight.w800,
-    letterSpacing: 1.0,
+    letterSpacing: 0.2,
   );
 
   /// código personal: monoespaciado para que no se confundan caracteres.

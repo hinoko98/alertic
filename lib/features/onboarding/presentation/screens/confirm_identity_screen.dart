@@ -12,12 +12,14 @@ import '../../../session/domain/session.dart';
 import '../../domain/enrollment.dart';
 import '../../domain/enrollment_failure.dart';
 import '../widgets/identity_card.dart';
+import '../widgets/onboarding_scaffold.dart';
 
-/// Pantallas 04 y 05: la persona revisa los datos que el colegio cargó y
-/// confirma que son suyos.
+/// El código ya es válido; falta que la persona confirme que los datos son suyos.
 ///
 /// Es una sola pantalla para los dos roles que entran por código: el diseño es
-/// el mismo y solo cambia el contenido del recuadro.
+/// el mismo y solo cambia el contenido del recuadro. **Aquí se quema el código**,
+/// no antes: si la persona ve que el perfil no es el suyo, el código sigue
+/// sirviendo.
 ///
 /// Recibe un [CodeEnrollment] y no un [Enrollment] cualquiera, para que el
 /// compilador garantice lo que esta pantalla da por hecho: que hay un código que
@@ -41,9 +43,7 @@ class _ConfirmIdentityScreenState extends State<ConfirmIdentityScreen> {
       final Session session =
           await scope.enrollmentRepository.confirmIdentity(widget.enrollment.code);
       await scope.sessionStore.save(session);
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       await Navigator.of(context).pushNamed(AppRoutes.permissions);
     } on EnrollmentFailure catch (failure, stack) {
       ErrorReporter.report(failure, stack, context: 'confirmar identidad');
@@ -54,22 +54,16 @@ class _ConfirmIdentityScreenState extends State<ConfirmIdentityScreen> {
       ErrorReporter.report(error, stack, context: 'confirmar identidad');
       _showMessage('No pudimos confirmar tus datos. Intenta otra vez.');
     } finally {
-      if (mounted) {
-        setState(() => _isConfirming = false);
-      }
+      if (mounted) setState(() => _isConfirming = false);
     }
   }
 
   void _reportWrongData() {
-    _showMessage(
-      'Avisa en secretaría del IIC para que corrijan tus datos.',
-    );
+    _showMessage('Avisa en secretaría de tu colegio para que corrijan tus datos.');
   }
 
   void _showMessage(String message) {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text(message)));
@@ -79,71 +73,42 @@ class _ConfirmIdentityScreenState extends State<ConfirmIdentityScreen> {
   Widget build(BuildContext context) {
     final CodeEnrollment enrollment = widget.enrollment;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.screenGutter,
-                  AppSpacing.xl,
-                  AppSpacing.screenGutter,
-                  AppSpacing.xl,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'CÓDIGO VÁLIDO',
-                      style: AppTextStyles.eyebrow.copyWith(
-                        color: AppColors.brand,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    const Text('¿ERES TÚ?', style: AppTextStyles.screenTitle),
-                    const SizedBox(height: AppSpacing.lg),
-                    switch (enrollment) {
-                      StudentEnrollment() => _StudentCard(enrollment),
-                      GuardianEnrollment() => _GuardianCard(enrollment),
-                    },
-                    const SizedBox(height: AppSpacing.md),
-                    const LockedDataNote(
-                      message: 'El colegio registró estos datos. No se pueden '
-                          'editar desde la app.',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenGutter,
-                0,
-                AppSpacing.screenGutter,
-                AppSpacing.lg,
-              ),
-              child: Column(
-                children: <Widget>[
-                  PrimaryButton(
-                    label: 'SÍ, SOY YO',
-                    isLoading: _isConfirming,
-                    onPressed: _confirm,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  SecondaryButton(
-                    label: switch (enrollment) {
-                      StudentEnrollment() => 'MIS DATOS NO SON CORRECTOS',
-                      GuardianEnrollment() => 'FALTA UN HIJO O HAY UN ERROR',
-                    },
-                    centered: true,
-                    onPressed: _isConfirming ? null : _reportWrongData,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+    return OnboardingScaffold(
+      title: 'Confirma tus datos',
+      subtitle: 'Código válido',
+      footer: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          PrimaryButton(
+            label: 'Sí, soy yo',
+            isLoading: _isConfirming,
+            onPressed: _confirm,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SecondaryButton(
+            label: switch (enrollment) {
+              StudentEnrollment() => 'Mis datos no son correctos',
+              GuardianEnrollment() => 'Falta un hijo o hay un error',
+            },
+            onPressed: _isConfirming ? null : _reportWrongData,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Text('¿Eres tú?', style: AppTextStyles.screenTitle),
+          const SizedBox(height: AppSpacing.lg),
+          switch (enrollment) {
+            StudentEnrollment() => _StudentCard(enrollment),
+            GuardianEnrollment() => _GuardianCard(enrollment),
+          },
+          const SizedBox(height: AppSpacing.md),
+          const LockedDataNote(
+            message: 'El colegio registró estos datos. No se pueden editar desde '
+                'la app.',
+          ),
+        ],
       ),
     );
   }
@@ -158,27 +123,15 @@ class _StudentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return IdentityCard(
       children: <Widget>[
-        IdentityHeader(
-          role: enrollment.roleLabel,
-          fullName: enrollment.fullName,
-        ),
+        IdentityHeader(role: enrollment.roleLabel, fullName: enrollment.fullName),
         const Divider(height: 1),
-        DetailRow(
-          label: 'Grado',
-          value: '${enrollment.grade} · ${enrollment.shift}',
-        ),
+        DetailRow(label: 'Grado', value: '${enrollment.grade} · ${enrollment.shift}'),
         const Divider(height: 1),
-        DetailRow(
-          label: 'Director de grupo',
-          value: enrollment.homeroomTeacher,
-        ),
+        DetailRow(label: 'Director de grupo', value: enrollment.homeroomTeacher),
         const Divider(height: 1),
         const _CardSectionLabel('Acudientes vinculados'),
         for (final GuardianLink guardian in enrollment.guardians)
-          LinkedPersonRow(
-            name: guardian.fullName,
-            detail: guardian.relationship,
-          ),
+          LinkedPersonRow(name: guardian.fullName, detail: guardian.relationship),
         const SizedBox(height: AppSpacing.sm),
       ],
     );
@@ -194,10 +147,7 @@ class _GuardianCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return IdentityCard(
       children: <Widget>[
-        IdentityHeader(
-          role: enrollment.roleLabel,
-          fullName: enrollment.fullName,
-        ),
+        IdentityHeader(role: enrollment.roleLabel, fullName: enrollment.fullName),
         const Divider(height: 1),
         DetailRow(label: 'Celular', value: enrollment.maskedPhone),
         const Divider(height: 1),
@@ -231,7 +181,10 @@ class _CardSectionLabel extends StatelessWidget {
         AppSpacing.lg,
         AppSpacing.sm,
       ),
-      child: Text(label.toUpperCase(), style: AppTextStyles.eyebrow),
+      child: Text(
+        label.toUpperCase(),
+        style: AppTextStyles.eyebrow.copyWith(color: AppColors.inkMuted),
+      ),
     );
   }
 }

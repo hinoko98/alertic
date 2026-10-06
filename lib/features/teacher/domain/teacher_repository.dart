@@ -41,6 +41,8 @@ class AlertDraft {
     required this.instructions,
     this.meetingPoint,
     this.incidentId,
+    this.drill = false,
+    this.drillId,
   });
 
   final AlertLevel level;
@@ -54,6 +56,12 @@ class AlertDraft {
   /// docente la emite a partir de uno. Queda enlazado: después se puede
   /// responder qué la motivó.
   final String? incidentId;
+
+  /// Es un simulacro: se emite igual que una alerta, pero se marca como práctica.
+  final bool drill;
+
+  /// El simulacro programado que se está realizando, si lo era.
+  final String? drillId;
 
   /// A cuánta gente le va a sonar. Se muestra antes de enviar, para que quien
   /// la emite sepa el tamaño de lo que está haciendo.

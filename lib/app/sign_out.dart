@@ -48,8 +48,6 @@ Future<void> confirmAndSignOut(
   final bool? confirmed = await showDialog<bool>(
     context: context,
     builder: (BuildContext context) => AlertDialog(
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(),
       title: const Text('¿Cerrar sesión?'),
       content: Text(message),
       actions: <Widget>[

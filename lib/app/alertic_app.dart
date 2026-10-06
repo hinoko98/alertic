@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../core/config/app_config.dart';
 import '../core/constants/app_strings.dart';
 import '../core/errors/error_reporter.dart';
+import '../core/location/geolocator_location_service.dart';
+import '../core/location/location_service.dart';
 import '../core/network/api_client.dart';
 import '../core/network/server_status.dart';
 import '../core/notifications/device_registrar.dart';
@@ -11,7 +13,13 @@ import '../core/notifications/notification_service.dart';
 import '../core/notifications/push_notification_service.dart';
 import '../core/notifications/silent_notification_service.dart';
 import '../core/theme/app_theme.dart';
+import '../features/account/data/api_account_repository.dart';
+import '../features/account/domain/account_repository.dart';
 import '../features/alerts/data/api_alert_repository.dart';
+import '../features/drills/data/api_drill_repository.dart';
+import '../features/drills/domain/drill_repository.dart';
+import '../features/risks/data/api_risk_repository.dart';
+import '../features/risks/domain/risk_repository.dart';
 import '../features/alerts/data/api_event_hub.dart';
 import '../features/alerts/data/logging_alert_repository.dart';
 import '../features/alerts/domain/alert_repository.dart';
@@ -27,6 +35,8 @@ import '../features/onboarding/data/enrollment_repository.dart';
 import '../features/panel/data/api_panel_repository.dart';
 import '../features/panel/domain/panel_repository.dart';
 import '../features/session/data/in_memory_session_store.dart';
+import '../features/support/data/api_support_repository.dart';
+import '../features/support/domain/support_repository.dart';
 import '../features/session/domain/session_store.dart';
 import '../features/teacher/data/api_teacher_repository.dart';
 import '../features/teacher/domain/teacher_repository.dart';
@@ -53,6 +63,12 @@ class AlerticApp extends StatelessWidget {
     this.guardianRepository,
     this.panelRepository,
     this.incidentRepository,
+    this.supportRepository,
+    this.accountRepository,
+    this.drillRepository,
+    this.riskRepository,
+    this.locationService = const NoLocationService(),
+    this.showSplash = false,
     super.key,
   });
 
@@ -77,6 +93,7 @@ class AlerticApp extends StatelessWidget {
 
     return AlerticApp(
       key: key,
+      showSplash: true,
       enrollmentRepository: ApiEnrollmentRepository(api),
       credentialsRepository: ApiCredentialsRepository(api),
       alertRepository: alerts,
@@ -84,6 +101,11 @@ class AlerticApp extends StatelessWidget {
       teacherRepository: ApiTeacherRepository(api),
       guardianRepository: ApiGuardianRepository(api),
       incidentRepository: ApiIncidentRepository(api),
+      supportRepository: ApiSupportRepository(api),
+      accountRepository: ApiAccountRepository(api),
+      drillRepository: ApiDrillRepository(api),
+      riskRepository: ApiRiskRepository(api),
+      locationService: const GeolocatorLocationService(),
       liveUpdates: ApiLiveUpdates(hub),
       serverStatus: ApiServerStatus(api),
       // El panel del administrador comparte el repositorio de alertas para no
@@ -112,6 +134,20 @@ class AlerticApp extends StatelessWidget {
 
   /// Reportes de emergencia de la comunidad.
   final IncidentRepository? incidentRepository;
+
+  /// El chat con el soporte del colegio.
+  final SupportRepository? supportRepository;
+
+  /// Arranca con la entrada animada. Solo la app de verdad: las pruebas empiezan
+  /// en la bienvenida.
+  final bool showSplash;
+
+  final AccountRepository? accountRepository;
+  final DrillRepository? drillRepository;
+  final RiskRepository? riskRepository;
+
+  /// La ubicación del celular. Sin GPS (pruebas) no hay punto azul.
+  final LocationService locationService;
 
   /// Cambios en vivo del servidor.
   final LiveUpdates liveUpdates;
@@ -144,6 +180,11 @@ class AlerticApp extends StatelessWidget {
       guardianRepository: guardianRepository,
       panelRepository: panelRepository,
       incidentRepository: incidentRepository,
+      supportRepository: supportRepository,
+      accountRepository: accountRepository,
+      drillRepository: drillRepository,
+      riskRepository: riskRepository,
+      locationService: locationService,
       liveUpdates: liveUpdates,
       serverStatus: serverStatus,
       notifications: notifications,
@@ -152,7 +193,7 @@ class AlerticApp extends StatelessWidget {
         title: AppStrings.appName,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.build(),
-        initialRoute: AppRoutes.welcome,
+        initialRoute: showSplash ? AppRoutes.splash : AppRoutes.welcome,
         onGenerateRoute: AppRoutes.onGenerateRoute,
         onUnknownRoute: AppRoutes.onUnknownRoute,
       ),

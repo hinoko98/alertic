@@ -2,7 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../../../app/app_scope.dart';
+import '../../../../app/shell_scope.dart';
+import '../../../../shared/design/app_card.dart';
+import '../../../../shared/design/app_page.dart';
+import '../../../../shared/design/pill.dart';
+import '../../../../shared/design/section_label.dart';
+import '../../../../shared/design/status_banner.dart';
+import '../../../../shared/widgets/secondary_button.dart';
+import '../../../account/presentation/alerts_feed_screen.dart';
+import '../../../drills/presentation/drills_screen.dart';
 import '../../../../core/errors/error_reporter.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -97,105 +108,65 @@ class _GuardianHomeScreenState extends State<GuardianHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final AppScope scope = AppScope.of(context);
+    final String? school = ShellScope.maybeOf(context)?.schoolName;
 
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: StreamBuilder<Alert?>(
-          stream: scope.alertRepository.watchActiveAlert(),
-          builder: (BuildContext context, AsyncSnapshot<Alert?> snapshot) {
-            final Alert? active = snapshot.data;
+    return StreamBuilder<Alert?>(
+      stream: scope.alertRepository.watchActiveAlert(),
+      builder: (BuildContext context, AsyncSnapshot<Alert?> snapshot) {
+        final Alert? active = snapshot.data;
 
-            // Cuando cambia la alerta hay que volver a preguntar por los hijos:
-            // el estado de cada uno es por alerta.
-            if (snapshot.connectionState != ConnectionState.waiting &&
-                (!_hasLoaded || _loadedForAlert != active?.id)) {
-              final String? wanted = active?.id;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) _load(wanted);
-              });
-            }
+        // Cuando cambia la alerta hay que volver a preguntar por los hijos:
+        // el estado de cada uno es por alerta.
+        if (snapshot.connectionState != ConnectionState.waiting &&
+            (!_hasLoaded || _loadedForAlert != active?.id)) {
+          final String? wanted = active?.id;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _load(wanted);
+          });
+        }
 
-            return Column(
-              children: <Widget>[
-                _TopBar(guardian: widget.guardian),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.screenGutter,
-                      AppSpacing.md,
-                      AppSpacing.screenGutter,
-                      AppSpacing.xl,
-                    ),
-                    children: <Widget>[
-                      if (active != null)
-                        _AlertNotice(alert: active)
-                      else
-                        const _CalmNotice(),
-                      const SizedBox(height: AppSpacing.lg),
-                      const Text('TUS HIJOS', style: AppTextStyles.eyebrow),
-                      const SizedBox(height: AppSpacing.sm),
-                      if (_loading)
-                        const Padding(
-                          padding: EdgeInsets.all(AppSpacing.xl),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: AppColors.brand,
-                            ),
-                          ),
-                        )
-                      else
-                        for (final ChildStatus child in _children)
-                          _ChildCard(child: child, alertActive: active != null),
-                      if (active == null && !_loading) ...<Widget>[
-                        const SizedBox(height: AppSpacing.lg),
-                        _PickupLink(children: _children),
-                      ],
-                    ],
+        return AppPage(
+          title: 'Hola, ${PersonName.firstName(widget.guardian.fullName)}',
+          subtitle: <String>['Acudiente', ?school].join(' · '),
+          bottom: const _CallButton(),
+          body: ListView(
+            padding: const EdgeInsets.all(AppSpacing.screenGutter),
+            children: <Widget>[
+              if (active != null)
+                _AlertNotice(alert: active)
+              else
+                const _CalmNotice(),
+              const SectionLabel('TUS HIJOS'),
+              if (_loading)
+                const Padding(
+                  padding: EdgeInsets.all(AppSpacing.xl),
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppColors.brand),
                   ),
-                ),
-                const _CallButton(),
+                )
+              else
+                for (final ChildStatus child in _children)
+                  _ChildCard(child: child, alertActive: active != null),
+              if (active == null && !_loading) ...<Widget>[
+                const SizedBox(height: AppSpacing.sm),
+                _PickupLink(children: _children),
               ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.guardian});
-
-  final GuardianEnrollment guardian;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.screenGutter,
-        AppSpacing.md,
-        AppSpacing.screenGutter,
-        AppSpacing.md,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text(
-            'ALERTIC',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.5,
-              color: AppColors.ink,
-            ),
+              const SizedBox(height: AppSpacing.sm),
+              _LinkCard(
+                icon: Icons.event_outlined,
+                title: 'Simulacros',
+                onTap: () => pushInShell<void>(context, (_) => const DrillsScreen()),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _LinkCard(
+                icon: Icons.notifications_none,
+                title: 'Alertas y avisos',
+                onTap: () => pushInShell<void>(context, (_) => const AlertsFeedScreen()),
+              ),
+            ],
           ),
-          Text(
-            '${PersonName.short(guardian.fullName)} · ACUDIENTE'.toUpperCase(),
-            style: AppTextStyles.caption.copyWith(fontSize: 11),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -210,8 +181,11 @@ class _AlertNotice extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      color: AppColors.levelRed,
       padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.levelRed,
+        borderRadius: BorderRadius.circular(AppSpacing.radius),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -256,15 +230,11 @@ class _CalmNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        const Text('ESTADO DEL COLEGIO', style: AppTextStyles.eyebrow),
-        const SizedBox(height: AppSpacing.sm),
-        const Text('SIN ALERTAS', style: AppTextStyles.screenTitle),
-        const SizedBox(height: AppSpacing.xs),
-        Text('Jornada normal.', style: AppTextStyles.caption),
-      ],
+    return const StatusBanner(
+      key: Key('sin-alertas'),
+      icon: Icons.verified_user_outlined,
+      title: 'Sin alertas activas',
+      subtitle: 'Todo tranquilo en el colegio',
     );
   }
 }
@@ -279,121 +249,124 @@ class _ChildCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final String? note = child.note;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      decoration: BoxDecoration(border: Border.all(color: AppColors.border)),
-      child: Column(
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Row(
-              children: <Widget>[
-                _StatusBadge(child: child, alertActive: alertActive),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        '${PersonName.short(child.fullName)} · ${child.grade}',
-                        style: AppTextStyles.itemTitle.copyWith(fontSize: 14),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _statusLabel(child, alertActive),
-                        style: AppTextStyles.caption.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: child.isSafe ? AppColors.brand : AppColors.inkMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (alertActive && child.isSafe) ...<Widget>[
-            const Divider(height: 1),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: AppCard(
+        padding: EdgeInsets.zero,
+        borderColor: alertActive && child.needsHelp ? AppColors.brand : AppColors.border,
+        child: Column(
+          children: <Widget>[
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm,
-              ),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Row(
                 children: <Widget>[
+                  _Avatar(child: child, alertActive: alertActive),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
-                    child: Text('Ubicación', style: AppTextStyles.caption),
-                  ),
-                  Text(
-                    child.meetingPoint,
-                    style: AppTextStyles.caption.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.ink,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          '${PersonName.short(child.fullName)} · ${child.grade}',
+                          style: AppTextStyles.itemTitle.copyWith(fontSize: 14),
+                        ),
+                        const SizedBox(height: 2),
+                        if (!alertActive)
+                          Text(
+                            '${child.shift} · ${child.homeroomTeacher}',
+                            style: AppTextStyles.caption,
+                          ),
+                      ],
                     ),
                   ),
+                  if (alertActive) _StatusPill(child: child),
                 ],
               ),
             ),
+            if (alertActive && child.isSafe) ...<Widget>[
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Row(
+                  children: <Widget>[
+                    const Expanded(
+                      child: Text('Ubicación', style: AppTextStyles.caption),
+                    ),
+                    Text(
+                      child.meetingPoint,
+                      style: AppTextStyles.caption.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (note != null) ...<Widget>[
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Text(note, style: AppTextStyles.caption),
+              ),
+            ],
           ],
-          if (note != null) ...<Widget>[
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Text(note, style: AppTextStyles.caption),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
+}
 
-  static String _statusLabel(ChildStatus child, bool alertActive) {
-    if (!alertActive) {
-      return '${child.shift} · ${child.homeroomTeacher}';
-    }
+/// El estado de un hijo durante una alerta, en una insignia.
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.child});
+
+  final ChildStatus child;
+
+  @override
+  Widget build(BuildContext context) {
     if (child.isSafe) {
       final DateTime? at = child.reportedAt;
       final String hour = at == null
           ? ''
           : ' · ${at.hour}:${at.minute.toString().padLeft(2, '0')}';
-      return 'A SALVO$hour';
+      return Pill('A SALVO$hour', tone: PillTone.success);
     }
     if (child.needsHelp) {
-      return 'NECESITA AYUDA';
+      return const Pill('NECESITA AYUDA', tone: PillTone.brand);
     }
-    return 'SIN CONFIRMAR';
+    return const Pill('SIN CONFIRMAR', tone: PillTone.warning);
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.child, required this.alertActive});
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.child, required this.alertActive});
 
   final ChildStatus child;
   final bool alertActive;
 
   @override
   Widget build(BuildContext context) {
-    final (IconData icon, Color background, Color foreground) = switch (child) {
-      _ when !alertActive => (
-          Icons.school_outlined,
-          AppColors.surfaceAlt,
-          AppColors.ink,
-        ),
-      _ when child.isSafe => (Icons.check, AppColors.brand, AppColors.onBrand),
-      _ when child.needsHelp => (
-          Icons.error_outline,
-          AppColors.ink,
-          AppColors.onBrand,
-        ),
-      _ => (Icons.schedule, AppColors.surfaceAlt, AppColors.inkMuted),
-    };
+    final (Color background, Color foreground) = !alertActive
+        ? (AppColors.surfaceAlt, AppColors.ink)
+        : child.isSafe
+            ? (AppColors.successSoft, AppColors.success)
+            : child.needsHelp
+                ? (AppColors.brandSoft, AppColors.brand)
+                : (AppColors.warningSoft, AppColors.warning);
 
     return Container(
-      width: 40,
-      height: 40,
-      color: background,
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(color: background, shape: BoxShape.circle),
       alignment: Alignment.center,
-      child: Icon(icon, size: 20, color: foreground),
+      child: Text(
+        PersonName.initials(child.fullName),
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: foreground),
+      ),
     );
   }
 }
@@ -405,35 +378,37 @@ class _PickupLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      shape: const Border.fromBorderSide(BorderSide(color: AppColors.border)),
-      child: InkWell(
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (BuildContext context) => PickupScreen(children: children),
-          ),
+    return _LinkCard(
+      icon: Icons.badge_outlined,
+      title: 'CÓMO RECOGERLOS',
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (BuildContext context) => PickupScreen(children: children),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
-            children: <Widget>[
-              const Icon(
-                Icons.badge_outlined,
-                size: 20,
-                color: AppColors.ink,
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Text(
-                  'CÓMO RECOGERLOS',
-                  style: AppTextStyles.itemTitle,
-                ),
-              ),
-              const Icon(Icons.arrow_forward, size: 18, color: AppColors.ink),
-            ],
-          ),
-        ),
+      ),
+    );
+  }
+}
+
+class _LinkCard extends StatelessWidget {
+  const _LinkCard({required this.icon, required this.title, required this.onTap});
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        children: <Widget>[
+          Icon(icon, size: 20, color: AppColors.ink),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(child: Text(title, style: AppTextStyles.itemTitle)),
+          const Icon(Icons.chevron_right, color: AppColors.inkMuted),
+        ],
       ),
     );
   }
@@ -442,67 +417,54 @@ class _PickupLink extends StatelessWidget {
 class _CallButton extends StatelessWidget {
   const _CallButton();
 
-  /// Muestra el teléfono que publicó el colegio.
+  /// Llama al teléfono que publicó el colegio.
   ///
   /// Viene del servidor y no está escrito en la app. Si no hay, se dice: un
-  /// número inventado, con una familia preocupada, es peor que ninguno.
-  ///
-  /// TODO(llamada): abrir el marcador con `url_launcher`. Por ahora solo se
-  /// muestra el número, sin simular una llamada que no ocurre.
-  static Future<void> _showPhone(BuildContext context) async {
+  /// número inventado, con una familia preocupada, es peor que ninguno. Si el
+  /// celular no puede abrir el marcador, se muestra el número para marcarlo a
+  /// mano.
+  static Future<void> _call(BuildContext context) async {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    final GuardianRepository? repository =
-        AppScope.of(context).guardianRepository;
+    final GuardianRepository? repository = AppScope.of(context).guardianRepository;
 
-    String message;
-    try {
-      final String? phone = await repository?.loadSchoolPhone();
-      message = phone == null
-          ? 'El colegio todavía no publicó un número de contacto. Acércate a '
-              'la portería.'
-          : 'Coordinación IIC · $phone';
-    } catch (error, stack) {
-      ErrorReporter.report(error, stack, context: 'teléfono del colegio');
-      message = 'No pudimos traer el número. Revisa tu conexión.';
-    }
-
-    messenger
+    void say(String message) => messenger
       ..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text(message)));
+
+    try {
+      final String? phone = await repository?.loadSchoolPhone();
+      if (phone == null) {
+        say(
+          'El colegio todavía no publicó un número de contacto. Acércate a la '
+          'portería.',
+        );
+        return;
+      }
+
+      final String digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+      final bool opened = await launchUrl(Uri(scheme: 'tel', path: digits))
+          .catchError((Object _) => false);
+      if (!opened) say('Coordinación · $phone');
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'teléfono del colegio');
+      say('No pudimos traer el número. Revisa tu conexión.');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.screenGutter,
-          0,
-          AppSpacing.screenGutter,
-          AppSpacing.lg,
-        ),
-        child: Material(
-          color: AppColors.surface,
-          shape: const Border.fromBorderSide(BorderSide(color: AppColors.border)),
-          child: InkWell(
-            onTap: () => _showPhone(context),
-            child: SizedBox(
-              height: AppSpacing.buttonHeight,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  const Icon(Icons.call_outlined, size: 20, color: AppColors.ink),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    'LLAMAR A COORDINACIÓN',
-                    style: AppTextStyles.button.copyWith(color: AppColors.ink),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.screenGutter,
+        AppSpacing.sm,
+        AppSpacing.screenGutter,
+        AppSpacing.md,
+      ),
+      child: SecondaryButton(
+        key: const Key('llamar-coordinacion'),
+        label: 'LLAMAR A COORDINACIÓN',
+        icon: Icons.call_outlined,
+        onPressed: () => _call(context),
       ),
     );
   }
