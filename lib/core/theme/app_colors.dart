@@ -10,6 +10,11 @@ abstract final class AppColors {
   static const Color brand = Color(0xFFB2243B);
   static const Color brandDark = Color(0xFF8E1B2E);
 
+  /// El rojo anaranjado de lo que escribe el estudiante o el acudiente en el chat.
+  /// Más cálido que el carmesí de la marca para que se distinga de un vistazo de
+  /// lo que responde el colegio, que va en blanco.
+  static const Color chatMine = Color(0xFFD9431F);
+
   /// El rojo suave de las insignias y los botones «Ayuda».
   static const Color brandSoft = Color(0xFFFBEAEC);
 

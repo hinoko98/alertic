@@ -23,6 +23,10 @@ class FakeSupportRepository implements SupportRepository, LiveUpdates {
   int _unreadForStaff = 0;
   bool failNextSend = false;
 
+  /// Con esto encendido, cada mensaje de la persona recibe la confirmación
+  /// automática que da el servidor.
+  bool autoReply = false;
+
   /// Cuántas veces la persona escribió.
   int sent = 0;
 
@@ -98,6 +102,21 @@ class FakeSupportRepository implements SupportRepository, LiveUpdates {
     messages.add(message);
     sent++;
     _unreadForStaff++;
+    if (autoReply) {
+      // Lo que hace el servidor: confirmar que llegó y a quién se asignó.
+      messages.add(
+        SupportMessage(
+          id: '${_next++}',
+          fromStaff: true,
+          auto: true,
+          senderName: 'ALERTIC',
+          body: 'Recibimos tu mensaje. Se lo asignamos a Carlos Jaimes Duarte '
+              '(tu director de grupo), quien te responderá lo antes posible.',
+          createdAt: DateTime.now(),
+        ),
+      );
+      _unreadForPerson++;
+    }
     return message;
   }
 

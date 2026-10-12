@@ -7,9 +7,14 @@ class SupportMessage {
     required this.createdAt,
     this.senderName,
     this.urgent = false,
+    this.auto = false,
   });
 
   final String id;
+
+  /// Lo escribió ALERTIC solo (confirmar que llegó el mensaje, a quién se asignó),
+  /// no una persona del colegio.
+  final bool auto;
 
   /// Lo escribió el colegio (coordinación o el docente asignado), no la persona.
   final bool fromStaff;

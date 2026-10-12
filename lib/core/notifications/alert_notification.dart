@@ -8,7 +8,11 @@ enum PushKind {
 
   /// Un estudiante reportó una emergencia. Le llega a su director de grupo y a
   /// coordinación, que deciden si se convierte en alerta.
-  reporteEmergencia(wire: 'reporte_emergencia');
+  reporteEmergencia(wire: 'reporte_emergencia'),
+
+  /// Un mensaje del chat con el colegio, o la confirmación automática de que el
+  /// suyo llegó. El aviso no lleva el texto: dice que hay algo y la app lo pide.
+  chatMensaje(wire: 'chat_mensaje');
 
   const PushKind({required this.wire});
 

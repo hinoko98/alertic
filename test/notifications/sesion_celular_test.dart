@@ -13,11 +13,52 @@ import 'package:alertic/features/onboarding/domain/credentials.dart';
 import 'package:alertic/features/session/data/in_memory_session_store.dart';
 import 'package:alertic/features/session/domain/session.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Qué pasa con el celular cuando alguien cierra sesión, y que los avisos de
 /// reportes de emergencia lleguen a su pantalla.
 void main() {
+  group('un mensaje del chat llega como aviso', () {
+    // Mientras la app no conocía este tipo, lo descartaba en silencio: el colegio
+    // respondía, o ALERTIC confirmaba «recibimos tu mensaje», y no sonaba nada.
+    test('la confirmación automática se entiende y usa su propio canal', () {
+      final AlertNotification? notification = AlertNotification.tryFrom(<String, dynamic>{
+        'tipo': 'chat_mensaje',
+        'threadId': 'abc',
+        'titulo': 'Recibimos tu mensaje',
+        'primerPaso': 'Lo atiende Carlos Jaimes Duarte.',
+        'nivel': 'amarilla',
+        'tomarPantalla': 'false',
+        'privado': 'true',
+      });
+
+      expect(notification, isNotNull);
+      expect(notification!.kind, PushKind.chatMensaje);
+      expect(notification.title, 'Recibimos tu mensaje');
+      expect(notification.body, 'Lo atiende Carlos Jaimes Duarte.');
+      expect(notification.isPrivate, isTrue);
+      expect(NotificationChannels.forNotification(notification), NotificationChannels.messages);
+    });
+
+    test('un mensaje nunca toma la pantalla ni suena como alarma', () {
+      final AlertNotification notification = AlertNotification.tryFrom(<String, dynamic>{
+        'tipo': 'chat_mensaje',
+        'titulo': 'Mensaje del colegio',
+        'nivel': 'naranja',
+        'tomarPantalla': 'false',
+      })!;
+
+      final NotificationDetails details = NotificationChannels.detailsFor(
+        notification,
+        allowFullScreen: true,
+      );
+      expect(details.android!.fullScreenIntent, isFalse);
+      expect(details.android!.category, AndroidNotificationCategory.message);
+      expect(details.android!.channelId, NotificationChannels.messages);
+    });
+  });
+
   group('un reporte de emergencia llega como aviso', () {
     // Es el aviso que el servidor le manda al director de grupo y a
     // coordinación. Mientras la app no conocía este tipo, lo descartaba en

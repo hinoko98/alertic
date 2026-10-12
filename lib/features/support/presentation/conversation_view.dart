@@ -360,7 +360,12 @@ class _Bubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Lo que escribe la persona (estudiante o acudiente) va a la derecha, en rojo
+    // anaranjado; lo que responde el colegio, a la izquierda, en blanco. Es así en
+    // las dos pantallas del chat, la de la persona y la del colegio, para que cada
+    // lado se reconozca siempre por su color.
     final bool mine = !message.fromStaff;
+    final bool auto = message.auto;
 
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
@@ -372,7 +377,11 @@ class _Bubble extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 3),
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
           decoration: BoxDecoration(
-            color: mine ? AppColors.brand : AppColors.surface,
+            color: mine
+                ? AppColors.chatMine
+                : auto
+                    ? AppColors.surfaceAlt
+                    : AppColors.surface,
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(16),
               topRight: const Radius.circular(16),
@@ -409,7 +418,28 @@ class _Bubble extends StatelessWidget {
                     ],
                   ),
                 ),
-              if (!mine && message.senderName != null)
+              if (auto)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 3),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Icon(Icons.bolt, size: 13, color: AppColors.inkMuted),
+                      SizedBox(width: 2),
+                      Text(
+                        'ALERTIC · RESPUESTA AUTOMÁTICA',
+                        key: Key('respuesta-automatica'),
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                          color: AppColors.inkMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (!mine && message.senderName != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2),
                   child: Text(
@@ -417,7 +447,7 @@ class _Bubble extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.brand,
+                      color: AppColors.chatMine,
                     ),
                   ),
                 ),

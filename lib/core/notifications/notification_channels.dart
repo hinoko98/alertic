@@ -21,6 +21,7 @@ abstract final class NotificationChannels {
   static const String yellow = 'alertic_amarilla_v1';
   static const String personal = 'alertic_personal_v1';
   static const String reports = 'alertic_reportes_v1';
+  static const String messages = 'alertic_mensajes_v1';
 
   /// El canal que le toca a un aviso.
   static String forNotification(AlertNotification notification) {
@@ -29,6 +30,9 @@ abstract final class NotificationChannels {
     }
     if (notification.kind == PushKind.reporteEmergencia) {
       return reports;
+    }
+    if (notification.kind == PushKind.chatMensaje) {
+      return messages;
     }
     return switch (notification.level) {
       AlertLevel.roja => red,
@@ -90,6 +94,17 @@ abstract final class NotificationChannels {
       importance: Importance.high,
     ),
 
+    /// Mensajes del chat con el colegio y la confirmación de que el tuyo llegó.
+    /// Suena como un mensaje cualquiera: no es una emergencia, y mezclarlo con las
+    /// alertas haría que la gente silencie todo.
+    AndroidNotificationChannel(
+      messages,
+      'Mensajes del colegio',
+      description: 'Respuestas del colegio a tus mensajes y confirmación de que '
+          'recibimos el tuyo.',
+      importance: Importance.high,
+    ),
+
     /// Avisos de una persona concreta: «tu hijo pidió ayuda».
     AndroidNotificationChannel(
       personal,
@@ -118,6 +133,7 @@ abstract final class NotificationChannels {
     required bool allowFullScreen,
   }) {
     final bool fullScreen = allowFullScreen && notification.takesOverScreen;
+    final bool isChat = notification.kind == PushKind.chatMensaje;
 
     return NotificationDetails(
       android: AndroidNotificationDetails(
@@ -127,7 +143,7 @@ abstract final class NotificationChannels {
         importance: notification.level == AlertLevel.roja
             ? Importance.max
             : Importance.high,
-        priority: Priority.max,
+        priority: isChat ? Priority.high : Priority.max,
         /*
          * `fullScreenIntent` es el mecanismo de una llamada entrante: toma la
          * pantalla aunque el celular esté bloqueado. Necesita el permiso
@@ -136,7 +152,11 @@ abstract final class NotificationChannels {
          * cuando el servidor lo pidió para este rol.
          */
         fullScreenIntent: fullScreen,
-        category: AndroidNotificationCategory.alarm,
+        // Un mensaje es un mensaje: la categoría de alarma haría que se salte el
+        // modo No molestar como si fuera una evacuación.
+        category: isChat
+            ? AndroidNotificationCategory.message
+            : AndroidNotificationCategory.alarm,
         // El nombre de un menor no se muestra en la pantalla bloqueada.
         visibility: notification.isPrivate
             ? NotificationVisibility.private

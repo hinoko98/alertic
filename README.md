@@ -578,7 +578,7 @@ componentes viven en `lib/shared/design/` (`AppPage`, `AppCard`, `Pill`, `IconBu
 | Acudiente | Inicio · Guías · Reportar · Perfil (el chat está en el encabezado) |
 | Coordinación | Emergencia · Comunidad · Mensajes · Más · Cuenta (en «Más»: Simulacros, Reportes de riesgo, Historial, Protocolos) |
 
-**Chat.** Estudiante y acudiente escriben al colegio; lo atiende su director de grupo o
+**Chat.** Lo que escribe la persona va a la derecha en rojo anaranjado; lo del colegio, a la izquierda en blanco; las respuestas automáticas de ALERTIC, a la izquierda en gris con la etiqueta «respuesta automática». Estudiante y acudiente escriben al colegio; lo atiende su director de grupo o
 coordinación (`features/support`). Los avisos llegan en vivo (`LiveChange.chat`) y por
 push sin el texto del mensaje.
 

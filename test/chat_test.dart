@@ -1,3 +1,4 @@
+import 'package:alertic/core/theme/app_colors.dart';
 import 'package:alertic/features/assistant/domain/risk_assistant.dart';
 import 'package:alertic/features/alerts/domain/hazard.dart';
 import 'package:alertic/features/alerts/domain/protocol.dart';
@@ -169,6 +170,63 @@ void main() {
       support.staffSays('Trae tu carné.');
       await tester.pumpAndSettle();
       expect(find.text('Trae tu carné.'), findsOneWidget);
+    });
+
+    testWidgets('lo del estudiante va a la derecha en rojo anaranjado y lo del colegio a la izquierda en blanco', (
+      WidgetTester tester,
+    ) async {
+      await signInWithCode(tester, 'IICB7K4P');
+      await openChat(tester);
+
+      await writeAndSend(tester, 'Hola, tengo una duda');
+      support.staffSays('Dime, ¿en qué te ayudo?');
+      await tester.pumpAndSettle();
+
+      Finder bubbleOf(String text) => find.ancestor(
+            of: find.text(text),
+            matching: find.byType(Container),
+          );
+      Align alignOf(String text) => tester.widget<Align>(
+            find.ancestor(of: find.text(text), matching: find.byType(Align)).first,
+          );
+      Color colorOf(String text) {
+        final Container box = tester.widget<Container>(bubbleOf(text).first);
+        return (box.decoration! as BoxDecoration).color!;
+      }
+
+      expect(alignOf('Hola, tengo una duda').alignment, Alignment.centerRight);
+      expect(colorOf('Hola, tengo una duda'), AppColors.chatMine);
+
+      expect(alignOf('Dime, ¿en qué te ayudo?').alignment, Alignment.centerLeft);
+      expect(colorOf('Dime, ¿en qué te ayudo?'), AppColors.surface);
+    });
+
+    testWidgets('al escribir, ALERTIC confirma que llegó y a quién se asignó', (
+      WidgetTester tester,
+    ) async {
+      support.autoReply = true;
+      await signInWithCode(tester, 'IICB7K4P');
+      await openChat(tester);
+
+      await writeAndSend(tester, '¿Hay clase mañana?');
+      // El servidor responde solo: el chat lo trae al refrescar.
+      await tester.pumpAndSettle();
+      support.staffSays('Con gusto, te cuento en un momento.');
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('respuesta-automatica')), findsOneWidget);
+      expect(find.textContaining('Recibimos tu mensaje'), findsOneWidget);
+      expect(find.textContaining('Carlos Jaimes Duarte'), findsOneWidget);
+      // La respuesta automática va a la izquierda, como lo del colegio.
+      final Align align = tester.widget<Align>(
+        find
+            .ancestor(
+              of: find.textContaining('Recibimos tu mensaje'),
+              matching: find.byType(Align),
+            )
+            .first,
+      );
+      expect(align.alignment, Alignment.centerLeft);
     });
 
     testWidgets('al volver del chat, la insignia ya no cuenta lo leído', (

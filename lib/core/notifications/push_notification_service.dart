@@ -9,8 +9,10 @@ import 'alert_notification.dart';
 import 'notification_channels.dart';
 import 'notification_service.dart';
 
-/// Icono del aviso. Es el del lanzador mientras no haya uno monocromo propio.
-const String _notificationIcon = '@mipmap/ic_launcher';
+/// Icono del aviso: el escudo de ALERTIC en blanco sobre transparente
+/// (`android/app/src/main/res/drawable-*/ic_stat_alertic.png`). Android exige
+/// que sea monocromo: con el del lanzador saldría un cuadro blanco.
+const String _notificationIcon = '@drawable/ic_stat_alertic';
 
 /// Las notificaciones reales, con Firebase Cloud Messaging.
 ///
@@ -246,7 +248,12 @@ Future<void> showAlertNotification(
     // Un id fijo por alerta hace que un reintento de Firebase reemplace el aviso
     // en vez de apilar tres iguales. El aviso personal va en otro id para que no
     // borre el de la alerta.
-    id: notification.kind == PushKind.hijoNecesitaAyuda ? 2 : 1,
+    id: switch (notification.kind) {
+      PushKind.hijoNecesitaAyuda => 2,
+      // Los mensajes van aparte: uno nuevo no debe borrar el aviso de una alerta.
+      PushKind.chatMensaje => 3,
+      _ => 1,
+    },
     title: notification.title,
     body: notification.body,
     notificationDetails: NotificationChannels.detailsFor(

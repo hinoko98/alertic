@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- El carmesí de ALERTIC (AppColors.brand). -->
+    <color name="ic_launcher_background">#B2243B</color>
+    <!-- Color con el que Android tiñe el icono pequeño de las notificaciones. -->
+    <color name="notification_accent">#B2243B</color>
+</resources>

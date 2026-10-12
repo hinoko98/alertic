@@ -90,6 +90,7 @@ class ApiSupportRepository implements SupportRepository {
       id: item['id'] as String? ?? '',
       fromStaff: item['fromStaff'] as bool? ?? false,
       urgent: item['urgent'] as bool? ?? false,
+      auto: item['auto'] as bool? ?? false,
       senderName: item['senderName'] as String?,
       body: item['body'] as String? ?? '',
       createdAt: DateTime.tryParse(item['createdAt'] as String? ?? '')?.toLocal() ??
