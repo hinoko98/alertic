@@ -8,18 +8,30 @@ class ApiRiskRepository implements RiskRepository {
   final ApiClient _api;
 
   @override
-  Future<void> report({
+  Future<RiskReport> report({
     required RiskKind kind,
     required String place,
     String? details,
   }) async {
-    await _api.post(
+    final Map<String, dynamic> response = await _api.post(
       '/risks',
       body: <String, dynamic>{
         'kind': kind.wire,
         'place': place.trim(),
         if (details != null && details.trim().isNotEmpty) 'details': details.trim(),
       },
+    );
+
+    final Object? created = response['report'];
+    final Map<String, dynamic> item = created is Map<String, dynamic> ? created : <String, dynamic>{};
+    return RiskReport(
+      id: item['id'] as String? ?? '',
+      number: (item['number'] as num?)?.toInt(),
+      kind: kind,
+      place: place.trim(),
+      status: RiskStatus.tryParse(item['status'] as String?) ?? RiskStatus.nuevo,
+      createdAt: DateTime.tryParse(item['createdAt'] as String? ?? '')?.toLocal() ?? DateTime.now(),
+      details: details?.trim(),
     );
   }
 
@@ -56,6 +68,7 @@ class ApiRiskRepository implements RiskRepository {
     final Object? reporter = item['reporter'];
     return RiskReport(
       id: item['id'] as String? ?? '',
+      number: (item['number'] as num?)?.toInt(),
       kind: kind,
       place: item['place'] as String? ?? '',
       status: status,
