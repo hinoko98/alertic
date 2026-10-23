@@ -38,6 +38,11 @@ class _AlertGateState extends State<AlertGate> {
 
   Alert? _active;
 
+  /// La meta de los simulacros, que dice el servidor. Se pide una vez, cuando
+  /// llega el primer simulacro.
+  Duration? _drillGoal;
+  bool _askedGoal = false;
+
   /// Alerta que esta persona ya atendió. Se guarda el id, no un booleano: si
   /// llega una alerta nueva mientras la anterior seguía en pantalla, la nueva
   /// tiene que verse.
@@ -51,6 +56,7 @@ class _AlertGateState extends State<AlertGate> {
       (Alert? alert) {
         if (mounted) {
           setState(() => _active = alert);
+          if (alert != null && alert.isDrill) _loadDrillGoal();
         }
       },
       onError: (Object error, StackTrace stack) {
@@ -65,6 +71,22 @@ class _AlertGateState extends State<AlertGate> {
   void dispose() {
     _subscription?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadDrillGoal() async {
+    if (_askedGoal) return;
+    _askedGoal = true;
+    try {
+      final overview = await AppScope.of(context).drillRepository?.load();
+      if (overview != null && mounted) {
+        setState(() => _drillGoal = Duration(seconds: overview.goalSeconds));
+      }
+    } catch (error, stack) {
+      // Sin la meta del servidor se usa la de siempre: no vale la pena frenar
+      // un simulacro por eso.
+      ErrorReporter.report(error, stack, context: 'meta del simulacro');
+      _askedGoal = false;
+    }
   }
 
   Future<void> _acknowledge(Alert alert) async {
@@ -112,6 +134,7 @@ class _AlertGateState extends State<AlertGate> {
     // demás roles solo dan por leída la alerta.
     return AlertScreen(
       alert: alert,
+      drillGoal: _drillGoal ?? const Duration(minutes: 5),
       student: profile is StudentEnrollment ? profile : null,
       onResponded: () => setState(() => _handledId = alert.id),
       onAcknowledge: () => _acknowledge(alert),
