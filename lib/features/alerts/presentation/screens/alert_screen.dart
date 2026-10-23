@@ -15,6 +15,7 @@ import '../../domain/safety_report.dart';
 import '../widgets/alert_level_style.dart';
 import '../widgets/alert_palette.dart';
 import '../widgets/drill_timer.dart';
+import '../widgets/haptic_pattern.dart';
 import '../widgets/pulsing_icon.dart';
 import '../widgets/hazard_icon.dart';
 
@@ -36,8 +37,16 @@ class AlertScreen extends StatelessWidget {
     this.student,
     this.onResponded,
     this.drillGoal = const Duration(minutes: 5),
+    this.strongVibration = false,
+    this.textScale = 1.0,
     super.key,
   });
+
+  /// Vibrar fuerte al aparecer (preferencia de la persona o apoyo para evacuar).
+  final bool strongVibration;
+
+  /// Cuánto se agranda la letra de la alerta, además del tamaño del sistema.
+  final double textScale;
 
   final Alert alert;
 
@@ -63,7 +72,21 @@ class AlertScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final AlertLevelStyle style = AlertLevelStyle.of(alert.level);
     final AlertPalette palette = AlertPalette.of(alert);
+    final MediaQueryData media = MediaQuery.of(context);
 
+    return HapticOnShow(
+      enabled: strongVibration,
+      // La letra de la alerta se agranda sobre la del sistema, no en su lugar.
+      child: MediaQuery(
+        data: media.copyWith(
+          textScaler: TextScaler.linear(media.textScaler.scale(1) * textScale),
+        ),
+        child: _body(context, palette, style),
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context, AlertPalette palette, AlertLevelStyle style) {
     return PopScope(
       // Una alerta no se quita con el botón de atrás: se responde.
       canPop: false,
