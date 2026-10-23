@@ -143,6 +143,9 @@ class FakeEnrollmentRepository implements EnrollmentRepository {
   final Map<String, ({String secret, ClaimOutcome outcome})> _requests =
       <String, ({String secret, ClaimOutcome outcome})>{};
 
+  /// Cuántas solicitudes de vinculación recibió el colegio.
+  int get requestsSent => _requests.length;
+
   /// Lo que responderá el colegio a las solicitudes nuevas.
   ClaimOutcome nextOutcome = const ClaimPending();
 
