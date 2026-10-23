@@ -142,4 +142,63 @@ void main() {
       expect(find.byKey(const Key('acudiente-tengo-codigo')), findsNothing);
     });
   });
+
+  Future<void> goToData(WidgetTester tester) async {
+    await searchChild(tester);
+    await tester.tap(find.text('Sí, continuar'));
+    await tester.pumpAndSettle();
+  }
+
+  group('12 · datos del acudiente', () {
+    testWidgets('resume al hijo y el parentesco elegido', (WidgetTester tester) async {
+      await searchChild(tester);
+      await tester.tap(find.byKey(const Key('parentesco-grandparent')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sí, continuar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tus datos de contacto'), findsOneWidget);
+      expect(find.text('Paso 3 de 4'), findsOneWidget);
+      expect(find.text('Valentina · 9.° B'), findsOneWidget);
+      expect(find.text('Abuelo o abuela'), findsOneWidget);
+    });
+
+    testWidgets('pide lo que falta antes de enviar y no manda nada', (
+      WidgetTester tester,
+    ) async {
+      await goToData(tester);
+
+      await tester.tap(find.text('Continuar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Escribe tu nombre completo.'), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('acudiente-nombre')), 'Sandra Rojas Gómez');
+      await tester.tap(find.text('Continuar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Revisa tu número de documento.'), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('acudiente-numero')), '63 456 789');
+      await tester.enterText(find.byKey(const Key('acudiente-celular')), 'abc');
+      await tester.tap(find.text('Continuar'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('error-datos')), findsOneWidget);
+
+      expect(enrollment.requestsSent, 0);
+    });
+
+    testWidgets('con los datos completos envía una solicitud por hijo', (
+      WidgetTester tester,
+    ) async {
+      await goToData(tester);
+
+      await tester.enterText(find.byKey(const Key('acudiente-nombre')), 'Sandra Rojas Gómez');
+      await tester.enterText(find.byKey(const Key('acudiente-numero')), '63 456 789');
+      await tester.enterText(find.byKey(const Key('acudiente-celular')), '300 555 12 34');
+      await tester.ensureVisible(find.text('Continuar'));
+      await tester.tap(find.text('Continuar'));
+      await tester.pumpAndSettle();
+
+      expect(enrollment.requestsSent, 1);
+    });
+  });
 }
