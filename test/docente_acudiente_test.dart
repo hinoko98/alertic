@@ -1,7 +1,9 @@
+import 'support/fakes/fake_account_repository.dart';
 import 'support/fakes/fake_alert_repository.dart';
 import 'support/fakes/fake_drill_repository.dart';
 import 'package:alertic/features/alerts/domain/alert_level.dart';
 import 'package:alertic/features/alerts/domain/hazard.dart';
+import 'package:alertic/features/onboarding/domain/guardian_link.dart';
 import 'package:alertic/features/drills/domain/drill_repository.dart';
 import 'support/fakes/fake_guardian_repository.dart';
 import 'support/fakes/fake_credentials_repository.dart';
@@ -17,10 +19,12 @@ import 'support/test_app.dart';
 void main() {
   late FakeAlertRepository alerts;
   late FakeDrillRepository drills;
+  late FakeAccountRepository account;
 
   setUp(() {
     alerts = FakeAlertRepository(latency: Duration.zero);
     drills = FakeDrillRepository();
+    account = FakeAccountRepository();
   });
   tearDown(() => alerts.dispose());
 
@@ -38,6 +42,7 @@ void main() {
             FakeTeacherRepository(alerts, latency: Duration.zero),
         guardianRepository: FakeGuardianRepository(latency: Duration.zero),
         drillRepository: drills,
+        accountRepository: account,
       ),
     );
   }
@@ -293,6 +298,73 @@ void main() {
       await signInWithCode(tester, 'IICB3HW8');
 
       expect(find.text('DEL COLEGIO'), findsNothing);
+    });
+
+    testWidgets('el perfil muestra a los hijos y los avisos que se pueden apagar', (
+      WidgetTester tester,
+    ) async {
+      await signInWithCode(tester, 'IICB3HW8');
+      await tester.tap(find.text('Perfil'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('HIJOS VINCULADOS'), findsOneWidget);
+      expect(find.byKey(const Key('agregar-hijo')), findsOneWidget);
+      expect(find.text('Alertas del colegio'), findsOneWidget);
+      expect(find.text('Siempre activas para acudientes'), findsOneWidget);
+
+      await tester.scrollUntilVisible(find.byKey(const Key('ajuste-hijo-a-salvo')), 200);
+      await tester.ensureVisible(find.byKey(const Key('ajuste-hijo-a-salvo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('ajuste-hijo-a-salvo')));
+      await tester.pumpAndSettle();
+      expect(account.settings.notifyChildSafe, isFalse);
+    });
+
+    testWidgets('«+ Agregar» busca al hijo, pide el parentesco y deja la solicitud', (
+      WidgetTester tester,
+    ) async {
+      await signInWithCode(tester, 'IICB3HW8');
+      await tester.tap(find.text('Perfil'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('agregar-hijo')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('hijo-documento')), '1098 765 434');
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('buscar-hijo')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('hijo-encontrado')), findsOneWidget);
+      expect(find.text('Sofía A••••• V•••••'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('hijo-parentesco-other')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('enviar-solicitud-hijo')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('solicitud-hijo-enviada')), findsOneWidget);
+      expect(account.childRequests, hasLength(1));
+      expect(account.childRequests.single.document, '1098765434');
+      expect(account.childRequests.single.relationship, GuardianRelationship.other);
+    });
+
+    testWidgets('un documento que no existe muestra el error y no deja enviar', (
+      WidgetTester tester,
+    ) async {
+      await signInWithCode(tester, 'IICB3HW8');
+      await tester.tap(find.text('Perfil'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('agregar-hijo')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('hijo-documento')), '99999999');
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('buscar-hijo')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('error-hijo')), findsOneWidget);
+      expect(find.byKey(const Key('enviar-solicitud-hijo')), findsNothing);
+      expect(account.childRequests, isEmpty);
     });
 
     testWidgets('durante una alerta dice primero que no vaya al colegio', (
