@@ -95,4 +95,34 @@ void main() {
       expect((chip.decoration! as BoxDecoration).color, const Color(0xFFB2243B));
     });
   });
+
+  group('16 · lluvias fuertes · amarillo', () {
+    testWidgets('amarillo con texto oscuro y aviso de precaución', (WidgetTester tester) async {
+      await pumpAlert(
+        tester,
+        alertOf(
+          hazard: Hazard.lluvia,
+          level: AlertLevel.amarilla,
+          title: 'LLUVIAS FUERTES',
+          scope: 'No hay que evacuar por ahora',
+        ),
+      );
+
+      expect(backgroundOf(tester), const Color(0xFFF4C430));
+      expect(find.text('● AVISO DE PRECAUCIÓN'), findsOneWidget);
+      expect(find.text('Alerta amarilla · Estar atentos'), findsOneWidget);
+      expect(find.text('Entendido'), findsOneWidget);
+      expect(find.text('Reportar algo peligroso'), findsOneWidget);
+    });
+
+    testWidgets('si la lluvia sube a roja deja de ser amarilla', (WidgetTester tester) async {
+      await pumpAlert(
+        tester,
+        alertOf(hazard: Hazard.lluvia, level: AlertLevel.roja, title: 'LLUVIAS FUERTES'),
+      );
+
+      expect(backgroundOf(tester), isNot(const Color(0xFFF4C430)));
+      expect(find.text('Reportar algo peligroso'), findsNothing);
+    });
+  });
 }
