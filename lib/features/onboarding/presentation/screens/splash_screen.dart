@@ -6,7 +6,7 @@ import '../../../../app/app_routes.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/theme/app_colors.dart';
 
-/// Pantalla 00: la entrada animada.
+/// Pantalla 01: la entrada animada.
 ///
 /// El escudo aparece, late y las ondas se expanden: dice «alerta» y «protección»
 /// en tres segundos, mientras la app termina de arrancar. Tocar la pantalla
