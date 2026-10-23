@@ -14,6 +14,7 @@ import '../../domain/hazard.dart';
 import '../../domain/safety_report.dart';
 import '../widgets/alert_level_style.dart';
 import '../widgets/alert_palette.dart';
+import '../widgets/drill_timer.dart';
 import '../widgets/pulsing_icon.dart';
 import '../widgets/hazard_icon.dart';
 
@@ -34,10 +35,15 @@ class AlertScreen extends StatelessWidget {
     this.onRespond,
     this.student,
     this.onResponded,
+    this.drillGoal = const Duration(minutes: 5),
     super.key,
   });
 
   final Alert alert;
+
+  /// La meta del colegio para un simulacro: confirmar a salvo dentro de este
+  /// tiempo. La dice el servidor; este valor solo se usa si no respondió.
+  final Duration drillGoal;
 
   /// La persona leyó la alerta. En amarilla y naranja cierra la pantalla.
   final VoidCallback onAcknowledge;
@@ -66,7 +72,10 @@ class AlertScreen extends StatelessWidget {
         body: SafeArea(
           child: Column(
             children: <Widget>[
-              _TopRow(alert: alert, palette: palette),
+              if (alert.isDrill)
+                const _DrillBanner()
+              else
+                _TopRow(alert: alert, palette: palette),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(
@@ -79,6 +88,10 @@ class AlertScreen extends StatelessWidget {
                     children: <Widget>[
                       _Title(alert: alert, palette: palette),
                       const SizedBox(height: AppSpacing.lg),
+                      if (alert.isDrill) ...<Widget>[
+                        DrillTimer(startedAt: alert.issuedAt, goal: drillGoal),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
                       _Instructions(alert: alert, style: style, palette: palette),
                       if (alert.coordinatorNote != null) ...<Widget>[
                         const SizedBox(height: AppSpacing.md),
@@ -99,6 +112,31 @@ class AlertScreen extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// La franja de un simulacro: nadie debe confundirlo con una emergencia.
+class _DrillBanner extends StatelessWidget {
+  const _DrillBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const Key('banner-simulacro'),
+      width: double.infinity,
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenGutter, vertical: 10),
+      child: const Text(
+        'SIMULACRO · ESTO ES UNA PRÁCTICA',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.6,
+          color: Color(0xFF2F2766),
         ),
       ),
     );
@@ -408,7 +446,7 @@ class _Actions extends StatelessWidget {
                 Expanded(
                   child: _AlertButton(
                     key: const Key('estoy-a-salvo'),
-                    label: 'Estoy a salvo',
+                    label: alert.isDrill ? 'Llegué al punto de encuentro' : 'Estoy a salvo',
                     background: Colors.transparent,
                     foreground: AppColors.onBrand,
                     border: Colors.white70,
@@ -532,6 +570,7 @@ class _Actions extends StatelessWidget {
 /// que se sube, y decirlo así evita que alguien baje por la escalera equivocada.
 String _routeLabel(Alert alert) {
   if (alert.hazard == Hazard.inundacion) return 'Ver ruta a zona alta';
+  if (alert.isDrill) return 'Ver mi ruta';
   return alert.level.requiresResponse ? 'Ver mi ruta de evacuación' : 'Ver mi ruta';
 }
 
