@@ -1,5 +1,8 @@
 import 'support/fakes/fake_alert_repository.dart';
+import 'support/fakes/fake_drill_repository.dart';
 import 'package:alertic/features/alerts/domain/alert_level.dart';
+import 'package:alertic/features/alerts/domain/hazard.dart';
+import 'package:alertic/features/drills/domain/drill_repository.dart';
 import 'support/fakes/fake_guardian_repository.dart';
 import 'support/fakes/fake_credentials_repository.dart';
 import 'support/fakes/fake_enrollment_repository.dart';
@@ -13,8 +16,12 @@ import 'support/test_app.dart';
 /// Bloques D y E: la app del docente y la del acudiente.
 void main() {
   late FakeAlertRepository alerts;
+  late FakeDrillRepository drills;
 
-  setUp(() => alerts = FakeAlertRepository(latency: Duration.zero));
+  setUp(() {
+    alerts = FakeAlertRepository(latency: Duration.zero);
+    drills = FakeDrillRepository();
+  });
   tearDown(() => alerts.dispose());
 
   Future<void> pumpApp(WidgetTester tester) async {
@@ -30,6 +37,7 @@ void main() {
         teacherRepository:
             FakeTeacherRepository(alerts, latency: Duration.zero),
         guardianRepository: FakeGuardianRepository(latency: Duration.zero),
+        drillRepository: drills,
       ),
     );
   }
@@ -240,10 +248,51 @@ void main() {
     ) async {
       await signInWithCode(tester, 'IICB3HW8');
 
-      expect(find.text('Sin alertas activas'), findsOneWidget);
+      expect(find.text('Todo tranquilo'), findsOneWidget);
       expect(find.text('TUS HIJOS'), findsOneWidget);
       expect(find.textContaining('Laura Pérez'), findsOneWidget);
       expect(find.textContaining('Andrés Pérez'), findsOneWidget);
+    });
+
+    testWidgets('en calma dice qué hijos ya activaron la app y avisa del que no', (
+      WidgetTester tester,
+    ) async {
+      await signInWithCode(tester, 'IICB3HW8');
+
+      expect(find.text('App activa'), findsOneWidget);
+      expect(find.text('Sin activar'), findsOneWidget);
+      expect(
+        find.text('Andrés aún no activa ALERTIC en su celular. Pídele el código en secretaría.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('«Del colegio» muestra el próximo simulacro', (WidgetTester tester) async {
+      // Directo a la lista: `schedule` espera un temporizador que en una
+      // prueba de widgets no avanza solo.
+      drills.upcoming.add(
+        Drill(
+          id: 'd1',
+          hazard: Hazard.sismo,
+          scheduledAt: DateTime.now().add(const Duration(days: 3)),
+          scope: 'Todo el colegio',
+        ),
+      );
+      await signInWithCode(tester, 'IICB3HW8');
+      await tester.scrollUntilVisible(find.text('DEL COLEGIO'), 200);
+
+      expect(find.text('DEL COLEGIO'), findsOneWidget);
+      expect(find.byKey(const Key('proximo-simulacro')), findsOneWidget);
+      expect(find.text('Simulacro de sismos'), findsOneWidget);
+      expect(find.textContaining('No es necesario ir al colegio'), findsOneWidget);
+    });
+
+    testWidgets('sin simulacros ni alertas anteriores no inventa nada', (
+      WidgetTester tester,
+    ) async {
+      await signInWithCode(tester, 'IICB3HW8');
+
+      expect(find.text('DEL COLEGIO'), findsNothing);
     });
 
     testWidgets('durante una alerta dice primero que no vaya al colegio', (
@@ -272,6 +321,7 @@ void main() {
     ) async {
       await signInWithCode(tester, 'IICB3HW8');
 
+      await tester.scrollUntilVisible(find.text('CÓMO RECOGERLOS'), 200);
       await tester.tap(find.text('CÓMO RECOGERLOS'));
       await tester.pumpAndSettle();
 
