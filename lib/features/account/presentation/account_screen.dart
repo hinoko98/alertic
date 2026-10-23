@@ -21,6 +21,7 @@ import '../../onboarding/presentation/widgets/identity_card.dart';
 import '../domain/account_repository.dart';
 import 'alert_preferences_screen.dart';
 import 'alerts_feed_screen.dart';
+import 'support_screen.dart';
 import 'change_password_sheet.dart';
 import 'family_contacts_view.dart';
 
@@ -211,6 +212,16 @@ class _AccountScreenState extends State<AccountScreen> {
                     onTap: () => _push((_) => const AlertPreferencesScreen()),
                   ),
                   const Divider(height: 1),
+                  if (student) ...<Widget>[
+                    _Row(
+                      key: const Key('apoyo-para-evacuar'),
+                      icon: Icons.favorite_border,
+                      title: 'Apoyo para evacuar',
+                      subtitle: 'Accesibilidad y compañeros de apoyo',
+                      onTap: () => _push((_) => const SupportScreen()),
+                    ),
+                    const Divider(height: 1),
+                  ],
                   _Row(
                     icon: Icons.location_on_outlined,
                     title: 'Ubicación en emergencias',
