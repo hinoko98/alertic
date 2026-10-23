@@ -97,6 +97,14 @@ abstract interface class PanelRepository {
   /// el último punto general.
   Future<void> deleteMeetingPoint(String code);
 
+  /// Acudientes que pidieron vincularse a un estudiante y esperan al colegio.
+  Future<List<GuardianRequest>> loadGuardianRequests();
+
+  /// Acepta la solicitud: el acudiente queda vinculado al estudiante.
+  Future<void> approveGuardianRequest(String id);
+
+  Future<void> rejectGuardianRequest(String id);
+
   /// Guarda el protocolo de una amenaza. Es lo que cada celular guarda y lee sin
   /// conexión.
   Future<void> saveProtocol(Protocol protocol);

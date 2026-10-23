@@ -402,3 +402,35 @@ class PanelActionFailure implements Exception {
   @override
   String toString() => 'PanelActionFailure: $message';
 }
+
+/// Un acudiente que pidió vincularse a un estudiante y espera la decisión del
+/// colegio.
+class GuardianRequest {
+  const GuardianRequest({
+    required this.id,
+    required this.fullName,
+    required this.relationship,
+    required this.studentName,
+    required this.matchesRoster,
+    required this.createdAt,
+    this.document,
+    this.documentType,
+    this.phone,
+    this.email,
+    this.grade,
+  });
+
+  final String id;
+  final String fullName;
+  final String relationship;
+  final String? documentType;
+  final String? document;
+  final String? phone;
+  final String? email;
+  final String studentName;
+  final String? grade;
+
+  /// El documento ya figuraba como acudiente de ese estudiante en la matrícula.
+  final bool matchesRoster;
+  final DateTime createdAt;
+}

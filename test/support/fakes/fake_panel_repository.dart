@@ -493,6 +493,38 @@ class FakePanelRepository implements PanelRepository {
     return '${person.codeHint}-DEMO';
   }
 
+  final List<GuardianRequest> _requests = <GuardianRequest>[
+    GuardianRequest(
+      id: 'req-1',
+      fullName: 'Jorge Rojas',
+      relationship: 'Padre',
+      documentType: 'C.C.',
+      document: '1004412',
+      studentName: 'Valentina Rojas',
+      grade: '9° B',
+      matchesRoster: false,
+      createdAt: DateTime(2026, 10, 22, 18, 20),
+    ),
+  ];
+
+  @override
+  Future<List<GuardianRequest>> loadGuardianRequests() async {
+    await Future<void>.delayed(latency);
+    return List<GuardianRequest>.of(_requests);
+  }
+
+  @override
+  Future<void> approveGuardianRequest(String id) async {
+    await Future<void>.delayed(latency);
+    _requests.removeWhere((GuardianRequest r) => r.id == id);
+  }
+
+  @override
+  Future<void> rejectGuardianRequest(String id) async {
+    await Future<void>.delayed(latency);
+    _requests.removeWhere((GuardianRequest r) => r.id == id);
+  }
+
   @override
   Future<void> closeSessions(String id) async {
     await Future<void>.delayed(latency);

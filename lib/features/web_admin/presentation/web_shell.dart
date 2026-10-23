@@ -32,6 +32,7 @@ class _WebShellState extends State<WebShell> {
       ValueNotifier<Map<WebPage, int>>(const <WebPage, int>{});
 
   WebPage _page = WebPage.resumen;
+  Widget? _detail;
   String? _schoolName;
   bool _started = false;
 
@@ -83,7 +84,17 @@ class _WebShellState extends State<WebShell> {
 
   void _go(WebPage page) {
     if (_scaffold.currentState?.isDrawerOpen ?? false) Navigator.of(context).pop();
-    setState(() => _page = page);
+    setState(() {
+      _page = page;
+      _detail = null;
+    });
+  }
+
+  void _open(Widget screen) => setState(() => _detail = screen);
+
+  void _back() {
+    setState(() => _detail = null);
+    _loadBadges();
   }
 
   Future<void> _signOut() async {
@@ -134,6 +145,10 @@ class _WebShellState extends State<WebShell> {
       current: _page,
       go: _go,
       openMenu: () => _scaffold.currentState?.openDrawer(),
+      open: _open,
+      back: _back,
+      hasDetail: _detail != null,
+      refreshBadges: _loadBadges,
       badges: _badges,
       child: Scaffold(
         key: _scaffold,
@@ -142,7 +157,10 @@ class _WebShellState extends State<WebShell> {
         body: Row(
           children: <Widget>[
             if (!drawer) SizedBox(width: 256, child: ColoredBox(color: WebColors.ink, child: menu)),
-            Expanded(child: KeyedSubtree(key: ValueKey<WebPage>(_page), child: _screenFor(_page))),
+            Expanded(child: KeyedSubtree(
+                key: ValueKey<Object>(_detail ?? _page),
+                child: _detail ?? _screenFor(_page),
+              ),),
           ],
         ),
       ),
