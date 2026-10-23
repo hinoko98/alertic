@@ -13,6 +13,10 @@ import '../../../../shared/design/section_label.dart';
 import '../../../../shared/design/status_banner.dart';
 import '../../../../shared/widgets/secondary_button.dart';
 import '../../../account/presentation/alerts_feed_screen.dart';
+import '../../../drills/domain/drill_repository.dart';
+import '../../../alerts/presentation/widgets/hazard_icon.dart';
+import '../../../../shared/design/icon_bubble.dart';
+import '../../../../shared/format.dart';
 import '../../../drills/presentation/drills_screen.dart';
 import '../../../../core/errors/error_reporter.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -59,9 +63,20 @@ class _GuardianHomeScreenState extends State<GuardianHomeScreen> {
 
   StreamSubscription<LiveChange>? _live;
 
+  /// Lo que el colegio tiene para la familia en calma: el próximo simulacro y
+  /// cómo salió la última alerta.
+  Drill? _nextDrill;
+  Alert? _lastAlert;
+  String? _lastSummary;
+  bool _askedSchoolNews = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_askedSchoolNews) {
+      _askedSchoolNews = true;
+      _loadSchoolNews();
+    }
     // Cuando uno de sus hijos confirma, la pantalla cambia sola. El servidor
     // solo avisa de los hijos de esta persona, no de los de nadie más.
     _live ??= AppScope.of(context).liveUpdates.changes
@@ -77,6 +92,48 @@ class _GuardianHomeScreenState extends State<GuardianHomeScreen> {
   void dispose() {
     unawaited(_live?.cancel());
     super.dispose();
+  }
+
+  Future<void> _loadSchoolNews() async {
+    final AppScope scope = AppScope.of(context);
+    try {
+      final DrillOverview? overview = await scope.drillRepository?.load();
+      if (mounted && overview != null) setState(() => _nextDrill = overview.next);
+    } catch (error, stack) {
+      // Son extras: sin ellos el inicio sirve igual.
+      ErrorReporter.report(error, stack, context: 'próximo simulacro');
+    }
+
+    try {
+      final List<Alert> history = await scope.alertRepository.loadHistory();
+      if (!mounted || history.isEmpty) return;
+      final Alert last = history.first;
+      final List<ChildStatus> children =
+          await scope.guardianRepository!.loadChildren(last.id);
+      if (!mounted) return;
+      setState(() {
+        _lastAlert = last;
+        _lastSummary = _summaryOf(last, children);
+      });
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'última alerta');
+    }
+  }
+
+  /// «Tus hijos confirmaron a salvo en 4 y 6 min».
+  static String _summaryOf(Alert alert, List<ChildStatus> children) {
+    final List<int> minutes = <int>[
+      for (final ChildStatus child in children)
+        if (child.isSafe && child.reportedAt != null)
+          child.reportedAt!.difference(alert.issuedAt).inMinutes.clamp(0, 999),
+    ];
+    if (minutes.isEmpty) return 'Sin confirmaciones registradas';
+    final String times = minutes.length == 1
+        ? '${minutes.first} min'
+        : '${minutes.sublist(0, minutes.length - 1).join(', ')} y ${minutes.last} min';
+    return minutes.length == 1
+        ? 'Tu hijo confirmó a salvo en $times'
+        : 'Tus hijos confirmaron a salvo en $times';
   }
 
   Future<void> _load(String? alertId) async {
@@ -148,8 +205,31 @@ class _GuardianHomeScreenState extends State<GuardianHomeScreen> {
                 for (final ChildStatus child in _children)
                   _ChildCard(child: child, alertActive: active != null),
               if (active == null && !_loading) ...<Widget>[
+                for (final ChildStatus child in _children)
+                  if (!child.appActive)
+                    _InactiveNotice(
+                      key: Key('sin-activar-${PersonName.firstName(child.fullName)}'),
+                      child: child,
+                    ),
                 const SizedBox(height: AppSpacing.sm),
                 _PickupLink(children: _children),
+                if (_nextDrill != null || _lastAlert != null) ...<Widget>[
+                  const SectionLabel('DEL COLEGIO'),
+                  if (_nextDrill != null)
+                    _NextDrillTile(
+                      drill: _nextDrill!,
+                      onTap: () => pushInShell<void>(context, (_) => const DrillsScreen()),
+                    ),
+                  if (_nextDrill != null && _lastAlert != null)
+                    const SizedBox(height: AppSpacing.sm),
+                  if (_lastAlert != null)
+                    _LastAlertTile(
+                      alert: _lastAlert!,
+                      summary: _lastSummary ?? '',
+                      onTap: () =>
+                          pushInShell<void>(context, (_) => const AlertsFeedScreen()),
+                    ),
+                ],
               ],
               const SizedBox(height: AppSpacing.sm),
               _LinkCard(
@@ -167,6 +247,136 @@ class _GuardianHomeScreenState extends State<GuardianHomeScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+/// «Tomás aún no activa ALERTIC en su celular».
+class _InactiveNotice extends StatelessWidget {
+  const _InactiveNotice({required this.child, super.key});
+
+  final ChildStatus child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.warningSoft,
+          borderRadius: BorderRadius.circular(AppSpacing.radius),
+          border: Border.all(color: const Color(0xFFF1D9A6)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Icon(Icons.info_outline, size: 20, color: AppColors.warning),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Text(
+                '${PersonName.firstName(child.fullName)} aún no activa ALERTIC en su '
+                'celular. Pídele el código en secretaría.',
+                style: const TextStyle(fontSize: 14, height: 1.45, color: Color(0xFF5E3D00)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NextDrillTile extends StatelessWidget {
+  const _NextDrillTile({required this.drill, required this.onTap});
+
+  final Drill drill;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      key: const Key('proximo-simulacro'),
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 48,
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.ink,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+            ),
+            child: Column(
+              children: <Widget>[
+                Text(
+                  Fmt.monthTag(drill.scheduledAt),
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white70),
+                ),
+                Text(
+                  '${drill.scheduledAt.day}',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Simulacro de ${drill.hazard.label.toLowerCase()}',
+                  style: AppTextStyles.itemTitle,
+                ),
+                Text(
+                  '${Fmt.weekday(drill.scheduledAt)} · ${Fmt.hour(drill.scheduledAt)} · '
+                  'No es necesario ir al colegio',
+                  style: AppTextStyles.caption,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LastAlertTile extends StatelessWidget {
+  const _LastAlertTile({required this.alert, required this.summary, required this.onTap});
+
+  final Alert alert;
+  final String summary;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      key: const Key('ultima-alerta'),
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        children: <Widget>[
+          IconBubble.neutral(icon: hazardIcon(alert.hazard), size: 38),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Última alerta: ${alert.hazard.label.toLowerCase()} · '
+                  '${Fmt.dayMonthShort(alert.issuedAt)}',
+                  style: AppTextStyles.itemTitle,
+                ),
+                Text(summary, style: AppTextStyles.caption),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: AppColors.inkMuted),
+        ],
+      ),
     );
   }
 }
@@ -233,8 +443,8 @@ class _CalmNotice extends StatelessWidget {
     return const StatusBanner(
       key: Key('sin-alertas'),
       icon: Icons.verified_user_outlined,
-      title: 'Sin alertas activas',
-      subtitle: 'Todo tranquilo en el colegio',
+      title: 'Todo tranquilo',
+      subtitle: 'No hay alertas en el colegio de tus hijos',
     );
   }
 }
@@ -279,7 +489,13 @@ class _ChildCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (alertActive) _StatusPill(child: child),
+                  if (alertActive)
+                    _StatusPill(child: child)
+                  else
+                    Pill(
+                      child.appActive ? 'App activa' : 'Sin activar',
+                      tone: child.appActive ? PillTone.success : PillTone.warning,
+                    ),
                 ],
               ),
             ),
