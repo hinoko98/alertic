@@ -4,6 +4,7 @@ import '../core/errors/error_reporter.dart';
 import '../features/assistant/presentation/assistant_screen.dart';
 import '../features/onboarding/domain/enrollment.dart';
 import '../features/onboarding/domain/guardian_link.dart';
+import '../features/onboarding/presentation/screens/guardian_confirm_screen.dart';
 import '../features/onboarding/presentation/screens/guardian_search_screen.dart';
 import '../features/onboarding/presentation/screens/confirm_identity_screen.dart';
 import '../features/onboarding/presentation/screens/enter_code_screen.dart';
@@ -61,6 +62,7 @@ abstract final class AppRoutes {
       familySetup => _familySetupRoute(settings),
       enterCode => _route(const EnterCodeScreen(), settings),
       guardianSearch => _guardianSearchRoute(settings),
+      guardianConfirm => _guardianConfirmRoute(settings),
       permissions => _route(const PermissionsScreen(), settings),
       signIn => _route(const SignInScreen(), settings),
       confirmIdentity => _confirmIdentityRoute(settings),
@@ -78,6 +80,20 @@ abstract final class AppRoutes {
       GuardianSearchScreen(draft: args is GuardianDraft ? args : null),
       settings,
     );
+  }
+
+  static Route<dynamic> _guardianConfirmRoute(RouteSettings settings) {
+    final Object? args = settings.arguments;
+    final StudentMatch? student = args is GuardianStepArgs ? args.student : null;
+    if (args is! GuardianStepArgs || student == null) {
+      ErrorReporter.report(
+        ArgumentError.value(args, 'arguments', 'Falta el estudiante encontrado'),
+        StackTrace.current,
+        context: 'navegación',
+      );
+      return _route(const WelcomeScreen(), const RouteSettings(name: welcome));
+    }
+    return _route(GuardianConfirmScreen(draft: args.draft, student: student), settings);
   }
 
   static Route<dynamic> _familySetupRoute(RouteSettings settings) {
