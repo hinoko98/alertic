@@ -6,6 +6,7 @@ import '../../../../app/app_scope.dart';
 import '../../../../core/errors/error_reporter.dart';
 import '../../../onboarding/domain/enrollment.dart';
 import '../../../session/domain/session.dart';
+import '../../../account/domain/alert_preferences.dart';
 import '../../domain/alert.dart';
 import '../../domain/safety_report.dart';
 import '../../domain/alert_level.dart';
@@ -53,6 +54,9 @@ class _AlertGateState extends State<AlertGate> {
   Duration? _drillGoal;
   bool _askedGoal = false;
 
+  /// Cómo quiere la persona que le llegue la alerta en este celular.
+  AlertPreferences _preferences = const AlertPreferences();
+
   /// Alerta que esta persona ya atendió. Se guarda el id, no un booleano: si
   /// llega una alerta nueva mientras la anterior seguía en pantalla, la nueva
   /// tiene que verse.
@@ -85,6 +89,22 @@ class _AlertGateState extends State<AlertGate> {
         ErrorReporter.report(error, stack, context: 'flujo de alertas');
       },
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    try {
+      final AlertPreferences loaded = await AlertPreferencesStore.load();
+      if (mounted) setState(() => _preferences = loaded);
+    } catch (error, stack) {
+      // Sin las preferencias la alerta sale con los valores de siempre.
+      ErrorReporter.report(error, stack, context: 'preferencias de alerta');
+    }
   }
 
   @override
@@ -178,6 +198,8 @@ class _AlertGateState extends State<AlertGate> {
     return AlertScreen(
       alert: alert,
       drillGoal: _drillGoal ?? const Duration(minutes: 5),
+      strongVibration: _preferences.strongVibration,
+      textScale: _preferences.textSize.scale,
       student: profile is StudentEnrollment ? profile : null,
       onResponded: () {
         _markAnswered();
