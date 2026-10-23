@@ -29,9 +29,11 @@ class _WhoAreYouScreenState extends State<WhoAreYouScreen> {
   bool get _usesCode => _choice != _Choice.staff;
 
   void _next() {
-    Navigator.of(context).pushNamed(
-      _usesCode ? AppRoutes.enterCode : AppRoutes.signIn,
-    );
+    Navigator.of(context).pushNamed(switch (_choice) {
+      _Choice.student => AppRoutes.enterCode,
+      _Choice.guardian => AppRoutes.guardianSearch,
+      _Choice.staff => AppRoutes.signIn,
+    });
   }
 
   @override
