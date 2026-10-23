@@ -110,7 +110,11 @@ final class TeacherEnrollment extends Enrollment {
     this.email,
     this.homeroomGroup,
     this.groupSummaries = const <GroupSummary>[],
+    this.emergencyTask,
   });
+
+  /// Lo que le toca hacer en una emergencia, si coordinación se lo asignó.
+  final EmergencyTask? emergencyTask;
 
   /// Correo con el que entra. Se muestra en su perfil para que sepa con cuál
   /// cuenta está dentro.
@@ -148,6 +152,18 @@ final class TeacherEnrollment extends Enrollment {
 
   @override
   UserRole get role => UserRole.docente;
+}
+
+/// La tarea de un docente en una emergencia: «Guiar a 9.° B al Punto A».
+///
+/// La escribe coordinación desde el panel; la app solo la muestra.
+class EmergencyTask {
+  const EmergencyTask({required this.title, this.detail});
+
+  final String title;
+
+  /// `Por la escalera sur y pasar lista al llegar`.
+  final String? detail;
 }
 
 /// Cuántos estudiantes tiene un grupo, según la matrícula.

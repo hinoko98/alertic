@@ -72,6 +72,7 @@ abstract final class ProfileMapper {
           ],
           homeroomGroup: raw['homeroomGroup'] as String?,
           email: raw['email'] as String?,
+          emergencyTask: _mapTask(raw['emergencyTask']),
           groupSummaries: _mapList(
             raw['groupSummaries'],
             (Map<String, dynamic> item) => GroupSummary(
@@ -101,6 +102,13 @@ abstract final class ProfileMapper {
       );
     }
     return code;
+  }
+
+  static EmergencyTask? _mapTask(Object? raw) {
+    if (raw is! Map<String, dynamic>) return null;
+    final String? title = raw['title'] as String?;
+    if (title == null || title.trim().isEmpty) return null;
+    return EmergencyTask(title: title.trim(), detail: raw['detail'] as String?);
   }
 
   static MeetingPoint _mapMeetingPoint(Object? raw) {
