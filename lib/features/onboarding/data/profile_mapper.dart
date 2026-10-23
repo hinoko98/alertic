@@ -50,7 +50,7 @@ abstract final class ProfileMapper {
           ),
         ),
       UserRole.acudiente => GuardianEnrollment(
-          code: _requireCode(code, role),
+          code: code,
           fullName: fullName,
           maskedPhone: raw['maskedPhone'] as String? ?? '',
           children: _mapList(
