@@ -8,8 +8,11 @@ import '../../../onboarding/domain/enrollment.dart';
 import '../../../student/presentation/screens/guided_route_screen.dart';
 import '../../../student/presentation/screens/safe_check_in_screen.dart';
 import '../../domain/alert.dart';
+import '../../domain/alert_level.dart';
 import '../../domain/safety_report.dart';
 import '../widgets/alert_level_style.dart';
+import '../widgets/alert_palette.dart';
+import '../widgets/pulsing_icon.dart';
 import '../widgets/hazard_icon.dart';
 
 /// Pantallas 07: la alerta que recibe la persona.
@@ -51,16 +54,17 @@ class AlertScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AlertLevelStyle style = AlertLevelStyle.of(alert.level);
+    final AlertPalette palette = AlertPalette.of(alert);
 
     return PopScope(
       // Una alerta no se quita con el botón de atrás: se responde.
       canPop: false,
       child: Scaffold(
-        backgroundColor: style.bodyColor,
+        backgroundColor: palette.background,
         body: SafeArea(
           child: Column(
             children: <Widget>[
-              _TopRow(alert: alert, style: style),
+              _TopRow(alert: alert, palette: palette),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(
@@ -71,12 +75,12 @@ class AlertScreen extends StatelessWidget {
                   ),
                   child: Column(
                     children: <Widget>[
-                      _Title(alert: alert, style: style),
+                      _Title(alert: alert, palette: palette),
                       const SizedBox(height: AppSpacing.lg),
-                      _Instructions(alert: alert, style: style),
+                      _Instructions(alert: alert, style: style, palette: palette),
                       if (alert.coordinatorNote != null) ...<Widget>[
                         const SizedBox(height: AppSpacing.md),
-                        _CoordinatorNote(alert: alert, style: style),
+                        _CoordinatorNote(alert: alert, palette: palette),
                       ],
                     ],
                   ),
@@ -85,6 +89,7 @@ class AlertScreen extends StatelessWidget {
               _Actions(
                 alert: alert,
                 style: style,
+                palette: palette,
                 student: student,
                 onAcknowledge: onAcknowledge,
                 onRespond: onRespond,
@@ -100,53 +105,46 @@ class AlertScreen extends StatelessWidget {
 
 /// Franja superior: «ALERTA ACTIVA» y la hora.
 class _TopRow extends StatelessWidget {
-  const _TopRow({required this.alert, required this.style});
+  const _TopRow({required this.alert, required this.palette});
 
   final Alert alert;
-  final AlertLevelStyle style;
+  final AlertPalette palette;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.screenGutter,
-        AppSpacing.md,
+        AppSpacing.lg,
         AppSpacing.screenGutter,
         0,
       ),
       child: Row(
         children: <Widget>[
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: style.isFullBleed ? Colors.white : style.headerColor,
+              color: palette.topChipBackground,
               borderRadius: BorderRadius.circular(999),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Icon(
-                  Icons.circle,
-                  size: 8,
-                  color: style.isFullBleed ? style.headerColor : style.headerForeground,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  alert.isDrill ? 'SIMULACRO' : 'ALERTA ${alert.level.label}',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.6,
-                    color: style.isFullBleed ? style.headerColor : style.headerForeground,
-                  ),
-                ),
-              ],
+            child: Text(
+              '● ${palette.topLabel}',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.6,
+                color: palette.topChipForeground,
+              ),
             ),
           ),
           const Spacer(),
           Text(
             alert.issuedAtLabel,
-            style: TextStyle(fontSize: 12, color: style.bodyForeground.withValues(alpha: 0.85)),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: palette.isLight ? FontWeight.w600 : FontWeight.w400,
+              color: palette.foreground.withValues(alpha: 0.92),
+            ),
           ),
         ],
       ),
@@ -154,29 +152,31 @@ class _TopRow extends StatelessWidget {
   }
 }
 
-/// El círculo con el icono de la amenaza, el título y a quién cobija.
+/// El icono de la amenaza (con un latido), el título, el nivel y a quién cobija.
 class _Title extends StatelessWidget {
-  const _Title({required this.alert, required this.style});
+  const _Title({required this.alert, required this.palette});
 
   final Alert alert;
-  final AlertLevelStyle style;
+  final AlertPalette palette;
+
+  /// El título más corto se ve más grande: `SISMO` a 52, `LLUVIAS FUERTES` a 40.
+  static double _titleSize(String title) {
+    if (title.length <= 7) return 52;
+    if (title.length <= 11) return 44;
+    return 40;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final Color fg = style.bodyForeground;
+    final Color fg = palette.foreground;
 
     return Column(
       children: <Widget>[
         const SizedBox(height: AppSpacing.md),
-        Container(
-          width: 76,
-          height: 76,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: fg.withValues(alpha: 0.18),
-            border: Border.all(color: fg.withValues(alpha: 0.6), width: 2),
-          ),
-          child: Icon(hazardIcon(alert.hazard), size: 34, color: fg),
+        PulsingIcon(
+          icon: hazardIcon(alert.hazard),
+          color: fg,
+          pulse: !palette.isLight,
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
@@ -184,18 +184,20 @@ class _Title extends StatelessWidget {
           key: const Key('titulo-alerta'),
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: style.titleSize,
-            fontWeight: FontWeight.w900,
+            fontSize: _titleSize(alert.title),
+            fontWeight: FontWeight.w800,
             height: 1.05,
-            letterSpacing: -0.5,
+            letterSpacing: 0.5,
             color: fg,
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
+        _LevelChip(alert: alert, palette: palette),
+        const SizedBox(height: AppSpacing.md),
         Text(
           _scopeLine(alert),
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 12, color: fg.withValues(alpha: 0.85)),
+          style: TextStyle(fontSize: 15, color: fg.withValues(alpha: 0.95)),
         ),
       ],
     );
@@ -203,30 +205,73 @@ class _Title extends StatelessWidget {
 
   static String _scopeLine(Alert alert) {
     final String? point = alert.meetingPoint;
-    if (point == null) return '${alert.scope} · ${alert.level.meaning}';
+    if (point == null) return alert.scope;
     return '${alert.scope} · Punto $point';
+  }
+}
+
+/// «Alerta roja · Evacuar ya»: el nivel dicho con palabras, además del color.
+class _LevelChip extends StatelessWidget {
+  const _LevelChip({required this.alert, required this.palette});
+
+  final Alert alert;
+  final AlertPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final String text = alert.isDrill
+        ? 'Simulacro programado · ${alert.scope}'
+        : 'Alerta ${alert.level.label.toLowerCase()} · ${alert.level.meaning}';
+    final (Color background, Color foreground) = palette.levelChipFromLevel
+        ? switch (alert.level) {
+            AlertLevel.amarilla => (AppColors.levelYellow, AppColors.ink),
+            AlertLevel.naranja => (const Color(0xFFF28C28), AppColors.ink),
+            AlertLevel.roja => (AppColors.levelRed, Colors.white),
+          }
+        : (palette.levelChipBackground, palette.levelChipForeground);
+
+    return Container(
+      key: const Key('nivel-alerta'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: foreground),
+      ),
+    );
   }
 }
 
 /// «Qué hacer ahora»: los pasos, numerados y legibles de lejos.
 class _Instructions extends StatelessWidget {
-  const _Instructions({required this.alert, required this.style});
+  const _Instructions({
+    required this.alert,
+    required this.style,
+    required this.palette,
+  });
 
   final Alert alert;
   final AlertLevelStyle style;
+  final AlertPalette palette;
 
   @override
   Widget build(BuildContext context) {
-    final Color fg = style.bodyForeground;
-    final bool onColor = style.isFullBleed;
+    final Color fg = palette.foreground;
+    // Sobre un fondo claro los números van en el color oscuro; sobre uno de
+    // color, en blanco con el número del color del fondo.
+    final Color numberBackground = palette.isLight ? palette.accent : Colors.white;
+    final Color numberForeground = palette.isLight ? Colors.white : palette.accent;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: onColor ? Colors.black.withValues(alpha: 0.2) : AppColors.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radius),
-        border: onColor ? null : Border.all(color: AppColors.border),
+        color: palette.panel,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,10 +279,10 @@ class _Instructions extends StatelessWidget {
           Text(
             'QUÉ HACER AHORA',
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: FontWeight.w800,
-              letterSpacing: 1,
-              color: fg.withValues(alpha: 0.85),
+              letterSpacing: 0.6,
+              color: fg,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -248,19 +293,19 @@ class _Instructions extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Container(
-                    width: 22,
-                    height: 22,
+                    width: 24,
+                    height: 24,
                     decoration: BoxDecoration(
-                      color: onColor ? Colors.white : style.headerColor,
+                      color: numberBackground,
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       '${i + 1}',
                       style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: onColor ? style.headerColor : style.headerForeground,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: numberForeground,
                       ),
                     ),
                   ),
@@ -268,12 +313,7 @@ class _Instructions extends StatelessWidget {
                   Expanded(
                     child: Text(
                       alert.instructions[i],
-                      style: TextStyle(
-                        fontSize: alert.level.requiresResponse ? 16 : 15,
-                        fontWeight: FontWeight.w700,
-                        height: 1.3,
-                        color: fg,
-                      ),
+                      style: TextStyle(fontSize: 15, height: 1.4, color: fg),
                     ),
                   ),
                 ],
@@ -287,10 +327,10 @@ class _Instructions extends StatelessWidget {
 
 /// Nota de coordinación: por qué se emitió la alerta.
 class _CoordinatorNote extends StatelessWidget {
-  const _CoordinatorNote({required this.alert, required this.style});
+  const _CoordinatorNote({required this.alert, required this.palette});
 
   final Alert alert;
-  final AlertLevelStyle style;
+  final AlertPalette palette;
 
   @override
   Widget build(BuildContext context) {
@@ -298,14 +338,12 @@ class _CoordinatorNote extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: style.isFullBleed
-            ? style.bodyForeground.withValues(alpha: 0.14)
-            : AppColors.surfaceAlt,
+        color: palette.foreground.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
       ),
       child: Text(
         '${alert.issuedBy ?? 'Coordinación'}: ${alert.coordinatorNote}',
-        style: AppTextStyles.caption.copyWith(color: style.bodyForeground),
+        style: AppTextStyles.caption.copyWith(color: palette.foreground),
       ),
     );
   }
@@ -316,6 +354,7 @@ class _Actions extends StatelessWidget {
   const _Actions({
     required this.alert,
     required this.style,
+    required this.palette,
     required this.student,
     required this.onAcknowledge,
     required this.onRespond,
@@ -324,6 +363,7 @@ class _Actions extends StatelessWidget {
 
   final Alert alert;
   final AlertLevelStyle style;
+  final AlertPalette palette;
   final StudentEnrollment? student;
   final VoidCallback onAcknowledge;
   final ValueChanged<SafetyStatus>? onRespond;
@@ -352,7 +392,7 @@ class _Actions extends StatelessWidget {
               label: 'Ver mi ruta de evacuación',
               icon: Icons.map_outlined,
               background: Colors.white,
-              foreground: style.headerColor,
+              foreground: palette.accent,
               onPressed: () => Navigator.of(context).push<void>(
                 MaterialPageRoute<void>(
                   builder: (BuildContext context) =>
@@ -406,8 +446,8 @@ class _Actions extends StatelessWidget {
               key: const Key('alerta-entendido'),
               label: style.primaryAction,
               icon: Icons.check,
-              background: AppColors.ink,
-              foreground: AppColors.onBrand,
+              background: palette.isLight ? AppColors.ink : Colors.white,
+              foreground: palette.isLight ? AppColors.onBrand : palette.accent,
               onPressed: onAcknowledge,
             )
           else ...<Widget>[
@@ -415,7 +455,7 @@ class _Actions extends StatelessWidget {
               label: style.primaryAction,
               icon: Icons.check,
               background: Colors.white,
-              foreground: style.headerColor,
+              foreground: palette.accent,
               onPressed: () => onRespond?.call(SafetyStatus.safe),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -433,7 +473,7 @@ class _Actions extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 11,
-              color: style.isFullBleed ? Colors.white70 : AppColors.inkMuted,
+              color: palette.foreground.withValues(alpha: 0.8),
             ),
           ),
         ],
