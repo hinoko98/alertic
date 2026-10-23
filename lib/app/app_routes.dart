@@ -5,6 +5,7 @@ import '../features/assistant/presentation/assistant_screen.dart';
 import '../features/onboarding/domain/enrollment.dart';
 import '../features/onboarding/domain/guardian_link.dart';
 import '../features/onboarding/presentation/screens/guardian_confirm_screen.dart';
+import '../features/onboarding/presentation/screens/guardian_data_screen.dart';
 import '../features/onboarding/presentation/screens/guardian_search_screen.dart';
 import '../features/onboarding/presentation/screens/confirm_identity_screen.dart';
 import '../features/onboarding/presentation/screens/enter_code_screen.dart';
@@ -63,6 +64,7 @@ abstract final class AppRoutes {
       enterCode => _route(const EnterCodeScreen(), settings),
       guardianSearch => _guardianSearchRoute(settings),
       guardianConfirm => _guardianConfirmRoute(settings),
+      guardianData => _guardianDataRoute(settings),
       permissions => _route(const PermissionsScreen(), settings),
       signIn => _route(const SignInScreen(), settings),
       confirmIdentity => _confirmIdentityRoute(settings),
@@ -94,6 +96,19 @@ abstract final class AppRoutes {
       return _route(const WelcomeScreen(), const RouteSettings(name: welcome));
     }
     return _route(GuardianConfirmScreen(draft: args.draft, student: student), settings);
+  }
+
+  static Route<dynamic> _guardianDataRoute(RouteSettings settings) {
+    final Object? args = settings.arguments;
+    if (args is! GuardianStepArgs || args.draft.children.isEmpty) {
+      ErrorReporter.report(
+        ArgumentError.value(args, 'arguments', 'Faltan los hijos del acudiente'),
+        StackTrace.current,
+        context: 'navegación',
+      );
+      return _route(const WelcomeScreen(), const RouteSettings(name: welcome));
+    }
+    return _route(GuardianDataScreen(draft: args.draft), settings);
   }
 
   static Route<dynamic> _familySetupRoute(RouteSettings settings) {
