@@ -104,3 +104,22 @@ final class WrongCurrentPassword extends EnrollmentFailure {
 final class PasswordRejected extends EnrollmentFailure {
   const PasswordRejected(super.message);
 }
+
+/// El servidor no encontró un estudiante con ese documento en ese colegio.
+///
+/// Un documento mal escrito y uno que no existe responden lo mismo, a propósito:
+/// distinguirlos permitiría averiguar qué documentos hay en la matrícula.
+final class StudentNotFound extends EnrollmentFailure {
+  const StudentNotFound()
+      : super(
+          'No encontramos un estudiante con esos datos. Revisa el documento o '
+          'pide ayuda en secretaría.',
+        );
+}
+
+/// La solicitud de vinculación no existe, ya se usó o no corresponde a este
+/// celular.
+final class LinkRequestInvalid extends EnrollmentFailure {
+  const LinkRequestInvalid()
+      : super('Esa solicitud ya no vale. Empieza el registro de nuevo.');
+}

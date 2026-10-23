@@ -39,7 +39,11 @@ sealed class CodeEnrollment extends Enrollment {
   const CodeEnrollment({required this.code, required super.fullName});
 
   /// El código con el que llegó, para quemarlo al confirmar.
-  final PersonalCode code;
+  ///
+  /// Es `null` solo en un acudiente que se registró buscando a su hijo por
+  /// documento: no usó ningún código, y se le abrió la sesión cuando el colegio
+  /// aprobó su solicitud.
+  final PersonalCode? code;
 }
 
 /// Estudiante: pertenece a un grupo y tiene acudientes que reciben sus avisos.
@@ -80,7 +84,7 @@ final class StudentEnrollment extends CodeEnrollment {
 /// Acudiente: no tiene grado, pero recibe las alertas de uno o más estudiantes.
 final class GuardianEnrollment extends CodeEnrollment {
   const GuardianEnrollment({
-    required super.code,
+    super.code,
     required super.fullName,
     required this.maskedPhone,
     required this.children,

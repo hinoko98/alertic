@@ -2,6 +2,7 @@ import 'package:alertic/features/alerts/domain/meeting_point.dart';
 import 'package:alertic/features/session/domain/session.dart';
 import 'package:alertic/features/onboarding/domain/enrollment.dart';
 import 'package:alertic/features/onboarding/domain/enrollment_failure.dart';
+import 'package:alertic/features/onboarding/domain/guardian_link.dart';
 import 'package:alertic/features/onboarding/domain/personal_code.dart';
 import 'package:alertic/features/onboarding/data/enrollment_repository.dart';
 import 'package:alertic/features/onboarding/domain/school.dart';
@@ -124,5 +125,66 @@ class FakeEnrollmentRepository implements EnrollmentRepository {
       profile: enrollment,
       expiresAt: DateTime.now().add(const Duration(hours: 12)),
     );
+  }
+
+  /// Estudiantes que se pueden buscar por documento, con el nombre ya tapado
+  /// como lo manda el servidor.
+  static const Map<String, StudentMatch> _byDocument = <String, StudentMatch>{
+    '1095812334': StudentMatch(
+      maskedName: 'Valentina R••••• G•••••',
+      grade: '9.° B',
+      shift: 'Mañana',
+      maskedDocument: '•••2334',
+      document: '1095812334',
+    ),
+  };
+
+  /// Las solicitudes que el colegio aprueba en el siguiente `claim`.
+  final Map<String, ({String secret, ClaimOutcome outcome})> _requests =
+      <String, ({String secret, ClaimOutcome outcome})>{};
+
+  /// Lo que responderá el colegio a las solicitudes nuevas.
+  ClaimOutcome nextOutcome = const ClaimPending();
+
+  @override
+  Future<StudentMatch> findStudentByDocument({
+    required String schoolCode,
+    required String document,
+  }) async {
+    await Future<void>.delayed(latency);
+    if (schoolCode.toUpperCase() != 'IICB') throw const SchoolNotFound();
+    final StudentMatch? match =
+        _byDocument[document.replaceAll(RegExp(r'[^0-9A-Za-z]'), '')];
+    if (match == null) throw const StudentNotFound();
+    return match;
+  }
+
+  @override
+  Future<LinkRequest> requestGuardianLink({
+    required GuardianDraft draft,
+    required StudentMatch student,
+    required GuardianContact contact,
+  }) async {
+    await Future<void>.delayed(latency);
+    final String id = 'solicitud-${_requests.length + 1}';
+    _requests[id] = (secret: draft.claimSecret, outcome: nextOutcome);
+    return LinkRequest(
+      id: id,
+      approved: nextOutcome is ClaimApproved,
+      student: student,
+    );
+  }
+
+  @override
+  Future<ClaimOutcome> claimGuardianLink({
+    required String requestId,
+    required String claimSecret,
+  }) async {
+    await Future<void>.delayed(latency);
+    final request = _requests[requestId];
+    if (request == null || request.secret != claimSecret) {
+      throw const LinkRequestInvalid();
+    }
+    return request.outcome;
   }
 }

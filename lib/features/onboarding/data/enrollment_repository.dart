@@ -1,5 +1,6 @@
 import '../../session/domain/session.dart';
 import '../domain/enrollment.dart';
+import '../domain/guardian_link.dart';
 import '../domain/school.dart';
 import '../domain/personal_code.dart';
 
@@ -27,4 +28,26 @@ abstract interface class EnrollmentRepository {
   /// el rol: hacerlo en el celular permitiría usar un mismo código dos veces o
   /// entrar con un rol que no corresponde.
   Future<Session> confirmIdentity(PersonalCode code);
+
+  /// Busca al estudiante por su documento para el registro del acudiente.
+  ///
+  /// Lanza [SchoolNotFound] o [StudentNotFound].
+  Future<StudentMatch> findStudentByDocument({
+    required String schoolCode,
+    required String document,
+  });
+
+  /// Deja la solicitud de vinculación de un hijo. **No abre sesión**: el colegio
+  /// la aprueba y después el celular la reclama con [claimGuardianLink].
+  Future<LinkRequest> requestGuardianLink({
+    required GuardianDraft draft,
+    required StudentMatch student,
+    required GuardianContact contact,
+  });
+
+  /// Pregunta si el colegio ya aprobó la solicitud y, si sí, abre la sesión.
+  Future<ClaimOutcome> claimGuardianLink({
+    required String requestId,
+    required String claimSecret,
+  });
 }

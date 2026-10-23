@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../core/errors/error_reporter.dart';
 import '../features/assistant/presentation/assistant_screen.dart';
 import '../features/onboarding/domain/enrollment.dart';
+import '../features/onboarding/domain/guardian_link.dart';
+import '../features/onboarding/presentation/screens/guardian_search_screen.dart';
 import '../features/onboarding/presentation/screens/confirm_identity_screen.dart';
 import '../features/onboarding/presentation/screens/enter_code_screen.dart';
 import '../features/onboarding/presentation/screens/family_setup_screen.dart';
@@ -30,6 +32,12 @@ abstract final class AppRoutes {
   static const String confirmIdentity = '/confirmar-identidad';
   static const String permissions = '/permisos';
 
+  /// El registro del acudiente por documento (pantallas 10 a 13).
+  static const String guardianSearch = '/acudiente';
+  static const String guardianConfirm = '/acudiente-confirmar';
+  static const String guardianData = '/acudiente-datos';
+  static const String guardianLinked = '/acudiente-vinculacion';
+
   /// A quién se avisa cuando el estudiante está a salvo: el último paso.
   static const String familySetup = '/familia';
 
@@ -52,6 +60,7 @@ abstract final class AppRoutes {
       whoAreYou => _route(const WhoAreYouScreen(), settings),
       familySetup => _familySetupRoute(settings),
       enterCode => _route(const EnterCodeScreen(), settings),
+      guardianSearch => _guardianSearchRoute(settings),
       permissions => _route(const PermissionsScreen(), settings),
       signIn => _route(const SignInScreen(), settings),
       confirmIdentity => _confirmIdentityRoute(settings),
@@ -60,6 +69,15 @@ abstract final class AppRoutes {
       assistant => _route(const AssistantScreen(), settings),
       _ => null,
     };
+  }
+
+  /// Entra sin borrador la primera vez y con él cuando se agrega otro hijo.
+  static Route<dynamic> _guardianSearchRoute(RouteSettings settings) {
+    final Object? args = settings.arguments;
+    return _route(
+      GuardianSearchScreen(draft: args is GuardianDraft ? args : null),
+      settings,
+    );
   }
 
   static Route<dynamic> _familySetupRoute(RouteSettings settings) {

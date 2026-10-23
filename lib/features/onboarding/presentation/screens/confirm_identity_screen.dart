@@ -11,6 +11,7 @@ import '../../../../shared/widgets/secondary_button.dart';
 import '../../../session/domain/session.dart';
 import '../../domain/enrollment.dart';
 import '../../domain/enrollment_failure.dart';
+import '../../domain/personal_code.dart';
 import '../widgets/identity_card.dart';
 import '../widgets/onboarding_scaffold.dart';
 
@@ -40,8 +41,9 @@ class _ConfirmIdentityScreenState extends State<ConfirmIdentityScreen> {
     setState(() => _isConfirming = true);
     try {
       final AppScope scope = AppScope.of(context);
-      final Session session =
-          await scope.enrollmentRepository.confirmIdentity(widget.enrollment.code);
+      // Esta pantalla solo se abre con un perfil que llegó por código.
+      final PersonalCode code = widget.enrollment.code!;
+      final Session session = await scope.enrollmentRepository.confirmIdentity(code);
       await scope.sessionStore.save(session);
       if (!mounted) return;
       await Navigator.of(context).pushNamed(AppRoutes.permissions);
