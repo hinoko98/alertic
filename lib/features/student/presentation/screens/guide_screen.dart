@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'kit_screen.dart';
 
 import '../../../../app/app_scope.dart';
 import '../../../../app/shell_scope.dart';
@@ -95,7 +96,7 @@ class _GuideScreenState extends State<GuideScreen> {
               AppCard(
                 key: const Key('kit-de-emergencia'),
                 onTap: () => Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(builder: (_) => const _KitScreen()),
+                  MaterialPageRoute<void>(builder: (_) => const KitScreen()),
                 ),
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: const Row(
@@ -333,58 +334,6 @@ class _HazardGuideScreenState extends State<HazardGuideScreen> {
 
 /// El kit de emergencia: una lista de lo básico que conviene tener listo.
 ///
-/// Es la lista general de las entidades de gestión del riesgo, no un protocolo del
-/// colegio: por eso está aquí y no entre los protocolos que edita coordinación.
-class _KitScreen extends StatelessWidget {
-  const _KitScreen();
-
-  static const List<String> _items = <String>[
-    'Agua potable para varios días',
-    'Linterna con pilas de repuesto',
-    'Radio de pilas',
-    'Botiquín',
-    'Copias de documentos en una bolsa plástica',
-    'Medicamentos de uso diario',
-    'Alimentos que no se dañen',
-    'Silbato',
-    'Cargador portátil para el celular',
-    'Teléfonos de familia anotados en papel',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return AppPage(
-      title: 'Kit de emergencia',
-      subtitle: 'Qué tener listo',
-      onBack: () => Navigator.of(context).maybePop(),
-      showHelp: false,
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.screenGutter),
-        children: <Widget>[
-          AppCard(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              children: <Widget>[
-                for (final String item in _items)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: Row(
-                      children: <Widget>[
-                        const Icon(Icons.check_circle_outline, size: 18, color: AppColors.success),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(child: Text(item, style: AppTextStyles.body)),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _GuideError extends StatelessWidget {
   const _GuideError({required this.onRetry});
 
