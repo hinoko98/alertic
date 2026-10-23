@@ -514,8 +514,17 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(risks.reports, hasLength(1));
+      // Se abre «Reporte enviado» con su número y el seguimiento.
       expect(find.byKey(const Key('reporte-enviado')), findsOneWidget);
-      // Y queda en «mis reportes» con su estado.
+      expect(find.text('Reporte n.º 128'), findsOneWidget);
+      expect(find.text('Grieta o daño'), findsOneWidget);
+      expect(find.text('Bloque A, 2.° piso'), findsOneWidget);
+      expect(find.text('En revisión'), findsOneWidget);
+
+      // «Ver mis reportes» deja a la persona en Reportar, con su reporte en la lista.
+      await tester.tap(find.byKey(const Key('ver-mis-reportes')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('reporte-enviado')), findsNothing);
       expect(find.text('MIS REPORTES'), findsOneWidget);
       expect(find.text('Nuevo'), findsOneWidget);
     });
