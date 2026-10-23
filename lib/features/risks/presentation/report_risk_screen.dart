@@ -19,6 +19,7 @@ import '../../../shared/format.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../alerts/domain/live_updates.dart';
 import '../domain/risk_repository.dart';
+import 'report_sent_screen.dart';
 
 /// Pantalla 15: reportar un riesgo.
 ///
@@ -45,7 +46,6 @@ class _ReportRiskScreenState extends State<ReportRiskScreen> {
   List<RiskReport> _mine = <RiskReport>[];
   StreamSubscription<LiveChange>? _live;
   bool _sending = false;
-  bool _justSent = false;
   String? _error;
 
   @override
@@ -81,6 +81,25 @@ class _ReportRiskScreenState extends State<ReportRiskScreen> {
     }
   }
 
+  /// La pantalla «Reporte enviado». «Ver mis reportes» y «Volver al inicio» la
+  /// cierran: el primero deja a la persona en la lista de Reportar, el segundo
+  /// la lleva a la pestaña de Inicio.
+  Future<void> _showSent(RiskReport sent) {
+    final ShellScope? shell = ShellScope.maybeOf(context);
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (BuildContext sentContext) => ReportSentScreen(
+          report: sent,
+          onSeeMine: () => Navigator.of(sentContext).pop(),
+          onHome: () {
+            Navigator.of(sentContext).pop();
+            shell?.openTab('Inicio');
+          },
+        ),
+      ),
+    );
+  }
+
   /// Avisar de una emergencia es de estudiantes y docentes: son quienes están en
   /// el edificio. Un acudiente reporta riesgos, no emergencias.
   bool get _canReportEmergency {
@@ -95,11 +114,10 @@ class _ReportRiskScreenState extends State<ReportRiskScreen> {
     setState(() {
       _sending = true;
       _error = null;
-      _justSent = false;
     });
 
     try {
-      await _repository.report(
+      final RiskReport sent = await _repository.report(
         kind: _kind!,
         place: _place.text,
         details: _details.text,
@@ -110,9 +128,10 @@ class _ReportRiskScreenState extends State<ReportRiskScreen> {
         _kind = null;
         _place.clear();
         _details.clear();
-        _justSent = true;
       });
       await _loadMine();
+      if (!mounted) return;
+      await _showSent(sent);
     } on ApiException catch (error) {
       if (mounted) setState(() => _error = error.message);
     } catch (error, stack) {
@@ -189,32 +208,6 @@ class _ReportRiskScreenState extends State<ReportRiskScreen> {
                     Icon(Icons.chevron_right, color: AppColors.brand),
                   ],
                 ),
-              ),
-            ),
-          if (_justSent)
-            Container(
-              key: const Key('reporte-enviado'),
-              margin: const EdgeInsets.only(bottom: AppSpacing.md),
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: AppColors.successSoft,
-                borderRadius: BorderRadius.circular(AppSpacing.radius),
-              ),
-              child: const Row(
-                children: <Widget>[
-                  Icon(Icons.check_circle_outline, size: 18, color: AppColors.success),
-                  SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      'Reporte enviado. Te avisaremos cuando lo revisen.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.success,
-                      ),
-                    ),
-                  ),
-                ],
               ),
             ),
           const SectionLabel('¿Qué viste?', padding: EdgeInsets.only(bottom: AppSpacing.sm)),
