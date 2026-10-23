@@ -29,6 +29,61 @@ abstract interface class TeacherRepository {
   /// Devuelve `null` si no se pudo saber; la pantalla lo dice sin inventar un
   /// número.
   Future<int?> loadReach();
+
+  /// El grupo en calma: cuántos tienen la app, cuántos acudientes están
+  /// vinculados, quién necesita apoyo para evacuar y qué falta por activar.
+  Future<GroupOverview> loadGroupOverview(String grade);
+}
+
+/// Alguien del grupo que necesita ayuda para salir, y quién lo acompaña.
+class SupportedStudent {
+  const SupportedStudent({
+    required this.fullName,
+    required this.needLabel,
+    this.buddies = const <String>[],
+  });
+
+  final String fullName;
+
+  /// `Movilidad reducida`.
+  final String needLabel;
+  final List<String> buddies;
+}
+
+/// Algo que falta en un estudiante: no activó la app o no tiene acudiente.
+class PendingStudent {
+  const PendingStudent({required this.fullName, required this.missingApp});
+
+  final String fullName;
+
+  /// `true`: no activó su código. `false`: su acudiente no se ha vinculado.
+  final bool missingApp;
+
+  String get reason => missingApp ? 'No ha activado su código' : 'Su acudiente no se ha vinculado';
+  String get chip => missingApp ? 'Sin app' : 'Sin acudiente';
+}
+
+/// El grupo de un docente, en calma.
+class GroupOverview {
+  const GroupOverview({
+    required this.grade,
+    required this.enrolled,
+    required this.appActive,
+    required this.guardiansLinked,
+    this.classroom,
+    this.meetingPoint,
+    this.needsSupport = const <SupportedStudent>[],
+    this.pending = const <PendingStudent>[],
+  });
+
+  final String grade;
+  final int enrolled;
+  final int appActive;
+  final int guardiansLinked;
+  final String? classroom;
+  final String? meetingPoint;
+  final List<SupportedStudent> needsSupport;
+  final List<PendingStudent> pending;
 }
 
 /// Los datos de una alerta antes de emitirla.

@@ -74,6 +74,33 @@ class FakeTeacherRepository implements TeacherRepository {
         SafetyStatus.safe;
   }
 
+  /// El grupo en calma que devuelve la prueba.
+  GroupOverview overview = const GroupOverview(
+    grade: '10° B',
+    enrolled: 32,
+    appActive: 30,
+    guardiansLinked: 29,
+    classroom: 'Aula 7 · Bloque A',
+    meetingPoint: 'P1',
+    needsSupport: <SupportedStudent>[
+      SupportedStudent(
+        fullName: 'Juan Pérez',
+        needLabel: 'Movilidad reducida',
+        buddies: <String>['Mateo Pinzón', 'Sara Mora'],
+      ),
+    ],
+    pending: <PendingStudent>[
+      PendingStudent(fullName: 'Tomás Ruiz', missingApp: true),
+      PendingStudent(fullName: 'Lina Mejía', missingApp: false),
+    ],
+  );
+
+  @override
+  Future<GroupOverview> loadGroupOverview(String grade) async {
+    await Future<void>.delayed(latency);
+    return overview;
+  }
+
   @override
   Future<int?> loadReach() async {
     await Future<void>.delayed(latency);

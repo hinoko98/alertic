@@ -86,6 +86,53 @@ class ApiTeacherRepository implements TeacherRepository {
     return people is num ? people.toInt() : null;
   }
 
+  @override
+  Future<GroupOverview> loadGroupOverview(String grade) async {
+    final Map<String, dynamic> raw =
+        await _api.get('/groups/${Uri.encodeComponent(grade)}/overview');
+
+    List<Map<String, dynamic>> maps(Object? value) => <Map<String, dynamic>>[
+          if (value is List<Object?>)
+            for (final Object? item in value)
+              if (item is Map<String, dynamic>) item,
+        ];
+
+    return GroupOverview(
+      grade: raw['grade'] as String? ?? grade,
+      enrolled: (raw['enrolled'] as num?)?.toInt() ?? 0,
+      appActive: (raw['appActive'] as num?)?.toInt() ?? 0,
+      guardiansLinked: (raw['guardiansLinked'] as num?)?.toInt() ?? 0,
+      classroom: raw['classroom'] as String?,
+      meetingPoint: raw['meetingPoint'] as String?,
+      needsSupport: <SupportedStudent>[
+        for (final Map<String, dynamic> item in maps(raw['needsSupport']))
+          SupportedStudent(
+            fullName: item['fullName'] as String? ?? '',
+            needLabel: _needLabel(item['need'] as String?),
+            buddies: <String>[
+              for (final Object? name in item['buddies'] as List<Object?>? ?? const <Object?>[])
+                if (name is String) name,
+            ],
+          ),
+      ],
+      pending: <PendingStudent>[
+        for (final Map<String, dynamic> item in maps(raw['pending']))
+          PendingStudent(
+            fullName: item['fullName'] as String? ?? '',
+            missingApp: item['reason'] == 'sin_app',
+          ),
+      ],
+    );
+  }
+
+  static String _needLabel(String? wire) => switch (wire) {
+        'movilidad' => 'Movilidad reducida',
+        'vision' => 'Baja visión',
+        'audicion' => 'Discapacidad auditiva',
+        'temporal' => 'Apoyo temporal',
+        _ => 'Necesita apoyo',
+      };
+
   RosterEntry _entry(Map<String, dynamic> item) {
     return RosterEntry(
       personId: item['personId'] as String? ?? '',
