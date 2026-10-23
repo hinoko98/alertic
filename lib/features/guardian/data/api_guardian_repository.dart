@@ -49,6 +49,7 @@ class ApiGuardianRepository implements GuardianRepository {
       location: _location(item['location'] as String?),
       reportedAt: DateTime.tryParse(item['reportedAt'] as String? ?? '')?.toLocal(),
       note: item['note'] as String?,
+      appActive: item['appActive'] as bool? ?? true,
     );
   }
 

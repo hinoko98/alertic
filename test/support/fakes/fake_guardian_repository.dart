@@ -26,6 +26,7 @@ class FakeGuardianRepository implements GuardianRepository {
         reportedAt: alertId == null ? null : DateTime.now(),
       ),
       const ChildStatus(
+        appActive: false,
         fullName: 'Andrés Felipe Pérez Gómez',
         grade: '6° A',
         shift: 'Mañana',

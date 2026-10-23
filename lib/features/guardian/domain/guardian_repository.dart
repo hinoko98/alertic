@@ -31,7 +31,12 @@ class ChildStatus {
     this.location,
     this.reportedAt,
     this.note,
+    this.appActive = true,
   });
+
+  /// ¿Ya activó ALERTIC en su celular? Si no, la familia es la única que se
+  /// entera por la app, y conviene decirle que pida el código en secretaría.
+  final bool appActive;
 
   final String fullName;
   final String grade;
