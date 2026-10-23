@@ -32,7 +32,7 @@ void main() {
 
     Future<void> goToCodeScreen(WidgetTester tester) async {
       await pumpApp(tester);
-      await tester.tap(find.text('Empezar'));
+      await tester.tap(find.text('Saltar'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Continuar'));
       await tester.pumpAndSettle();
@@ -46,13 +46,36 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    testWidgets('la bienvenida se recorre en cuatro pantallas hasta Empezar', (
+      WidgetTester tester,
+    ) async {
+      await pumpApp(tester);
+      expect(find.text('Bienvenido a ALERTIC'), findsOneWidget);
+
+      for (final String title in <String>[
+        'Te avisa al instante',
+        'Te guía a un lugar seguro',
+        'Tu familia sabe que estás bien',
+      ]) {
+        await tester.tap(find.text('Siguiente'));
+        await tester.pumpAndSettle();
+        expect(find.text(title), findsOneWidget);
+      }
+
+      // En la última ya no hay nada que saltar.
+      expect(find.text('Saltar'), findsNothing);
+      await tester.tap(find.text('Empezar'));
+      await tester.pumpAndSettle();
+      expect(find.text('¿Quién eres en el colegio?'), findsOneWidget);
+    });
+
     testWidgets('avanza de bienvenida a la pantalla del código', (
       WidgetTester tester,
     ) async {
       await pumpApp(tester);
-      expect(find.text('ALERTIC'), findsOneWidget);
+      expect(find.text('Bienvenido a ALERTIC'), findsOneWidget);
 
-      await tester.tap(find.text('Empezar'));
+      await tester.tap(find.text('Saltar'));
       await tester.pumpAndSettle();
       expect(find.text('¿Quién eres en el colegio?'), findsOneWidget);
 

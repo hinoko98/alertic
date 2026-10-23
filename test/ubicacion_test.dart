@@ -130,7 +130,7 @@ void main() {
           locationService: gps,
         ),
       );
-      await tester.tap(find.text('Empezar'));
+      await tester.tap(find.text('Saltar'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Continuar'));
       await tester.pumpAndSettle();
