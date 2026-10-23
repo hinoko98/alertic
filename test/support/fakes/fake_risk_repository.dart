@@ -20,7 +20,7 @@ class FakeRiskRepository implements RiskRepository, LiveUpdates {
   Stream<LiveChange> get changes => _changes.stream;
 
   @override
-  Future<void> report({
+  Future<RiskReport> report({
     required RiskKind kind,
     required String place,
     String? details,
@@ -30,10 +30,9 @@ class FakeRiskRepository implements RiskRepository, LiveUpdates {
       failNext = false;
       throw StateError('sin conexión');
     }
-    reports.insert(
-      0,
-      RiskReport(
-        id: 'r${_next++}',
+    final RiskReport created = RiskReport(
+        id: 'r$_next',
+        number: 127 + _next++,
         kind: kind,
         place: place.trim(),
         status: RiskStatus.nuevo,
@@ -42,9 +41,10 @@ class FakeRiskRepository implements RiskRepository, LiveUpdates {
         reporterName: 'Laura Camila Pérez Gómez',
         reporterRole: 'estudiante',
         reporterGrade: '10° B',
-      ),
-    );
+      );
+    reports.insert(0, created);
     _changes.add(LiveChange.riskReports);
+    return created;
   }
 
   @override

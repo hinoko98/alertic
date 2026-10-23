@@ -51,6 +51,7 @@ class RiskReport {
     required this.place,
     required this.status,
     required this.createdAt,
+    this.number,
     this.details,
     this.reporterName,
     this.reporterRole,
@@ -59,6 +60,9 @@ class RiskReport {
   });
 
   final String id;
+
+  /// El «n.º 128» que se dice en secretaría. Lo pone el servidor.
+  final int? number;
   final RiskKind kind;
   final String place;
   final RiskStatus status;
@@ -81,8 +85,9 @@ class RiskReport {
 /// bandeja completa y un docente ve la de sus grupos.
 abstract interface class RiskRepository {
   /// Lanza si no llegó al servidor: quien reporta una grieta y ve «enviado» sin
-  /// que haya salido nada cree que ya avisó.
-  Future<void> report({
+  /// que haya salido nada cree que ya avisó. Devuelve el reporte tal como quedó,
+  /// con su número.
+  Future<RiskReport> report({
     required RiskKind kind,
     required String place,
     String? details,
