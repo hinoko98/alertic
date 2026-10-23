@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../help/presentation/help_screen.dart';
 import '../../../onboarding/domain/enrollment.dart';
+import '../../../risks/presentation/report_risk_screen.dart';
 import '../../../student/presentation/screens/guided_route_screen.dart';
 import '../../../student/presentation/screens/safe_check_in_screen.dart';
 import '../../domain/alert.dart';
@@ -468,7 +469,7 @@ class _Actions extends StatelessWidget {
               border: Colors.white70,
               onPressed: onAcknowledge,
             ),
-          ] else if (secondary == null)
+          ] else if (secondary == null) ...<Widget>[
             _AlertButton(
               key: const Key('alerta-entendido'),
               label: style.primaryAction,
@@ -476,7 +477,25 @@ class _Actions extends StatelessWidget {
               background: palette.isLight ? AppColors.ink : Colors.white,
               foreground: palette.isLight ? AppColors.onBrand : palette.accent,
               onPressed: onAcknowledge,
-            )
+            ),
+            // En amarilla no hay nada que evacuar, pero sí algo que ver: quien
+            // nota un talud que cede o una gotera nueva lo avisa desde aquí.
+            if (alert.level == AlertLevel.amarilla) ...<Widget>[
+              const SizedBox(height: AppSpacing.sm),
+              _AlertButton(
+                key: const Key('reportar-peligro'),
+                label: 'Reportar algo peligroso',
+                background: Colors.transparent,
+                foreground: palette.foreground,
+                border: palette.foreground,
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (BuildContext context) => const ReportRiskScreen(),
+                  ),
+                ),
+              ),
+            ],
+          ]
           else ...<Widget>[
             _AlertButton(
               label: style.primaryAction,

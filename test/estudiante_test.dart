@@ -164,6 +164,20 @@ void main() {
   });
 
   group('la alerta entra por encima de todo', () {
+    testWidgets('en amarilla se puede reportar algo peligroso sin salir de la alerta', (
+      WidgetTester tester,
+    ) async {
+      await signIn(tester, 'IICB7K4P');
+
+      alerts.simulate(AlertLevel.amarilla);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('reportar-peligro')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reportar un riesgo'), findsOneWidget);
+    });
+
     testWidgets('una alerta amarilla se lee y se cierra con «entendido»', (
       WidgetTester tester,
     ) async {
