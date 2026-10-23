@@ -35,6 +35,7 @@ import '../features/onboarding/data/enrollment_repository.dart';
 import '../features/panel/data/api_panel_repository.dart';
 import '../features/panel/domain/panel_repository.dart';
 import '../features/session/data/in_memory_session_store.dart';
+import '../features/web_admin/presentation/web_gate.dart';
 import '../features/support/data/api_support_repository.dart';
 import '../features/support/domain/support_repository.dart';
 import '../features/session/domain/session_store.dart';
@@ -69,6 +70,7 @@ class AlerticApp extends StatelessWidget {
     this.riskRepository,
     this.locationService = const NoLocationService(),
     this.showSplash = false,
+    this.webAdmin = false,
     super.key,
   });
 
@@ -93,7 +95,8 @@ class AlerticApp extends StatelessWidget {
 
     return AlerticApp(
       key: key,
-      showSplash: true,
+      showSplash: !kIsWeb,
+      webAdmin: kIsWeb,
       enrollmentRepository: ApiEnrollmentRepository(api),
       credentialsRepository: ApiCredentialsRepository(api),
       alertRepository: alerts,
@@ -141,6 +144,10 @@ class AlerticApp extends StatelessWidget {
   /// Arranca con la entrada animada. Solo la app de verdad: las pruebas empiezan
   /// en la bienvenida.
   final bool showSplash;
+
+  /// En el navegador la app es el panel del administrador: entra directo al
+  /// ingreso del panel y no pasa por la bienvenida del celular.
+  final bool webAdmin;
 
   final AccountRepository? accountRepository;
   final DrillRepository? drillRepository;
@@ -193,7 +200,10 @@ class AlerticApp extends StatelessWidget {
         title: AppStrings.appName,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.build(),
-        initialRoute: showSplash ? AppRoutes.splash : AppRoutes.welcome,
+        home: webAdmin ? const WebGate() : null,
+        initialRoute: webAdmin
+            ? null
+            : (showSplash ? AppRoutes.splash : AppRoutes.welcome),
         onGenerateRoute: AppRoutes.onGenerateRoute,
         onUnknownRoute: AppRoutes.onUnknownRoute,
       ),
