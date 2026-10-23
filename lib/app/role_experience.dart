@@ -10,6 +10,7 @@ import '../features/session/domain/session.dart';
 import '../features/student/presentation/screens/evacuation_map_screen.dart';
 import '../features/student/presentation/screens/guide_screen.dart';
 import '../features/risks/presentation/report_risk_screen.dart';
+import '../features/guardian/presentation/screens/family_guides_screen.dart';
 import '../features/guardian/presentation/screens/guardian_home_screen.dart';
 import '../features/panel/presentation/screens/community_tab.dart';
 import '../features/panel/presentation/screens/emergency_tab.dart';
@@ -164,9 +165,10 @@ final class TeacherExperience implements RoleExperience {
 
 /// Bloque E: la app del acudiente.
 ///
-/// Una pantalla de respuesta y otra para la cuenta. La familia no necesita
-/// navegar: necesita una respuesta, y por eso Inicio es lo primero y casi lo
-/// único; Cuenta está para salir y ver con qué número está registrada.
+/// Tres pestañas: Inicio (la respuesta), Guías (cómo actuar y prepararse) y
+/// Perfil (sus hijos y sus datos). La familia no necesita navegar: necesita una
+/// respuesta, y por eso Inicio es lo primero. Un acudiente no reporta riesgos
+/// desde aquí: eso es de quienes están dentro del edificio.
 final class GuardianExperience implements RoleExperience {
   const GuardianExperience();
 
@@ -190,12 +192,7 @@ final class GuardianExperience implements RoleExperience {
       AppDestination(
         label: 'Guías',
         icon: Icons.menu_book_outlined,
-        builder: (BuildContext context) => const GuideScreen(),
-      ),
-      AppDestination(
-        label: 'Reportar',
-        icon: Icons.warning_amber_outlined,
-        builder: (BuildContext context) => const ReportRiskScreen(),
+        builder: (BuildContext context) => const FamilyGuidesScreen(),
       ),
       AppDestination(
         label: 'Perfil',
