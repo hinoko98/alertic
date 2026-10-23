@@ -1,4 +1,6 @@
+import 'package:alertic/features/student/domain/quiz.dart';
 import 'package:alertic/features/student/presentation/screens/kit_screen.dart';
+import 'package:alertic/features/student/presentation/screens/quiz_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -60,6 +62,90 @@ void main() {
       await pumpKit(tester);
 
       expect(find.text('0 de 8'), findsOneWidget);
+    });
+  });
+
+  group('29 · quiz', () {
+    Future<void> pumpQuiz(WidgetTester tester) async {
+      await tester.pumpWidget(const MaterialApp(home: QuizScreen()));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> answer(WidgetTester tester, int option) async {
+      await tester.tap(find.byKey(Key('opcion-$option')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('muestra la primera pregunta y no deja avanzar sin contestar', (
+      WidgetTester tester,
+    ) async {
+      await pumpQuiz(tester);
+
+      expect(find.text('Sismo · pregunta 1 de 5'), findsOneWidget);
+      expect(find.text(SismoQuiz.questions.first.text), findsOneWidget);
+      expect(find.byKey(const Key('retroalimentacion')), findsNothing);
+      // El botón está apagado (opacidad baja) hasta que se conteste.
+      final Opacity button = tester.widget<Opacity>(
+        find.ancestor(of: find.text('Siguiente pregunta'), matching: find.byType(Opacity)).first,
+      );
+      expect(button.opacity, 0.4);
+    });
+
+    testWidgets('acertar dice «¡Correcto!» y explica por qué', (WidgetTester tester) async {
+      await pumpQuiz(tester);
+
+      await answer(tester, SismoQuiz.questions.first.correct);
+
+      expect(find.text('¡Correcto!'), findsOneWidget);
+      expect(find.textContaining('Correr mientras tiembla'), findsOneWidget);
+    });
+
+    testWidgets('fallar explica la respuesta correcta y no suma', (WidgetTester tester) async {
+      await pumpQuiz(tester);
+
+      await answer(tester, 0);
+
+      expect(find.text('No era esa'), findsOneWidget);
+      expect(find.textContaining('Correr mientras tiembla'), findsOneWidget);
+    });
+
+    testWidgets('una vez contestada, la pregunta no se puede cambiar', (
+      WidgetTester tester,
+    ) async {
+      await pumpQuiz(tester);
+
+      await answer(tester, 0);
+      await answer(tester, SismoQuiz.questions.first.correct);
+
+      expect(find.text('No era esa'), findsOneWidget);
+      expect(find.text('¡Correcto!'), findsNothing);
+    });
+
+    testWidgets('al terminar muestra cuántas acertó y deja repetir', (
+      WidgetTester tester,
+    ) async {
+      await pumpQuiz(tester);
+
+      for (int i = 0; i < SismoQuiz.questions.length; i++) {
+        // Acierta las tres primeras y falla las demás.
+        final int pick = i < 3 ? SismoQuiz.questions[i].correct : (SismoQuiz.questions[i].correct + 1) % 4;
+        await answer(tester, pick);
+        await tester.tap(find.byKey(const Key('siguiente-pregunta')));
+        await tester.pumpAndSettle();
+      }
+
+      expect(find.text('Acertaste 3 de 5'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('repetir-quiz')));
+      await tester.pumpAndSettle();
+      expect(find.text('Sismo · pregunta 1 de 5'), findsOneWidget);
+    });
+
+    test('cada pregunta tiene una respuesta correcta que existe', () {
+      for (final QuizQuestion q in SismoQuiz.questions) {
+        expect(q.correct, inInclusiveRange(0, q.options.length - 1));
+        expect(q.options.toSet().length, q.options.length, reason: 'sin opciones repetidas');
+      }
     });
   });
 }

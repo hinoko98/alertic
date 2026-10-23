@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'kit_screen.dart';
+import 'quiz_screen.dart';
 
 import '../../../../app/app_scope.dart';
 import '../../../../app/shell_scope.dart';
@@ -56,69 +57,89 @@ class _GuideScreenState extends State<GuideScreen> {
       subtitle: 'Guías antes, durante y después',
       body: FutureBuilder<List<Protocol>>(
         future: _protocols,
-        builder: (BuildContext context, AsyncSnapshot<List<Protocol>> snapshot) {
-          if (snapshot.hasError) {
-            return _GuideError(onRetry: () => setState(() => _protocols = _load()));
-          }
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.brand));
-          }
+        builder:
+            (BuildContext context, AsyncSnapshot<List<Protocol>> snapshot) {
+              if (snapshot.hasError) {
+                return _GuideError(
+                  onRetry: () => setState(() => _protocols = _load()),
+                );
+              }
+              if (!snapshot.hasData) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.brand),
+                );
+              }
 
-          final List<Protocol> protocols = snapshot.data!;
-          return ListView(
-            padding: const EdgeInsets.all(AppSpacing.screenGutter),
-            children: <Widget>[
-              const Row(
+              final List<Protocol> protocols = snapshot.data!;
+              return ListView(
+                padding: const EdgeInsets.all(AppSpacing.screenGutter),
                 children: <Widget>[
-                  Icon(Icons.cloud_off, size: 14, color: AppColors.inkFaint),
-                  SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      'Guardado en el celular. Funciona sin datos.',
-                      style: AppTextStyles.caption,
+                  const Row(
+                    children: <Widget>[
+                      Icon(
+                        Icons.cloud_off,
+                        size: 14,
+                        color: AppColors.inkFaint,
+                      ),
+                      SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          'Guardado en el celular. Funciona sin datos.',
+                          style: AppTextStyles.caption,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SectionLabel('Eventos naturales'),
+                  for (final Protocol protocol in protocols)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      child: _ProtocolCard(
+                        protocol: protocol,
+                        // Solo un estudiante tiene ruta propia que ver.
+                        onViewRoute:
+                            ShellScope.maybeOf(context)?.role ==
+                                UserRole.estudiante
+                            ? () => ShellScope.maybeOf(context)!.openTab('Mapa')
+                            : null,
+                      ),
+                    ),
+                  const SectionLabel('Prepárate'),
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        Expanded(
+                          child: _PrepareCard(
+                            key: const Key('kit-de-emergencia'),
+                            icon: Icons.medical_services_outlined,
+                            label: 'Kit de emergencia',
+                            onTap: () => Navigator.of(context).push<void>(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const KitScreen(),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: _PrepareCard(
+                            key: const Key('quiz-de-guias'),
+                            icon: Icons.favorite_border,
+                            label: 'Pon a prueba lo que sabes',
+                            onTap: () => Navigator.of(context).push<void>(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const QuizScreen(),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ),
-              const SectionLabel('Eventos naturales'),
-              for (final Protocol protocol in protocols)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: _ProtocolCard(
-                    protocol: protocol,
-                    // Solo un estudiante tiene ruta propia que ver.
-                    onViewRoute: ShellScope.maybeOf(context)?.role == UserRole.estudiante
-                        ? () => ShellScope.maybeOf(context)!.openTab('Mapa')
-                        : null,
-                  ),
-                ),
-              const SectionLabel('Prepárate'),
-              AppCard(
-                key: const Key('kit-de-emergencia'),
-                onTap: () => Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(builder: (_) => const KitScreen()),
-                ),
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: const Row(
-                  children: <Widget>[
-                    IconBubble.neutral(icon: Icons.medical_services_outlined, size: 38),
-                    SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text('Kit de emergencia', style: AppTextStyles.itemTitle),
-                          Text('Qué tener listo en casa y en la maleta', style: AppTextStyles.caption),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.chevron_right, color: AppColors.inkMuted),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
+              );
+            },
       ),
     );
   }
@@ -157,7 +178,12 @@ class _ProtocolCard extends StatelessWidget {
                   style: AppTextStyles.itemTitle.copyWith(fontSize: 15),
                 ),
                 const SizedBox(height: 2),
-                Text(keyPhrase, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppTextStyles.caption),
+                Text(
+                  keyPhrase,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption,
+                ),
               ],
             ),
           ),
@@ -175,7 +201,11 @@ class _ProtocolCard extends StatelessWidget {
 
 /// Pantalla 14: la guía de una amenaza, con sus pestañas Antes, Durante y Después.
 class HazardGuideScreen extends StatefulWidget {
-  const HazardGuideScreen({required this.protocol, this.onViewRoute, super.key});
+  const HazardGuideScreen({
+    required this.protocol,
+    this.onViewRoute,
+    super.key,
+  });
 
   final Protocol protocol;
 
@@ -232,7 +262,11 @@ class _HazardGuideScreenState extends State<HazardGuideScreen> {
             ),
             child: Row(
               children: <Widget>[
-                for (final (int i, String name) in <(int, String)>[(0, 'Antes'), (1, 'Durante'), (2, 'Después')])
+                for (final (int i, String name) in <(int, String)>[
+                  (0, 'Antes'),
+                  (1, 'Durante'),
+                  (2, 'Después'),
+                ])
                   Expanded(
                     child: GestureDetector(
                       key: Key('pestana-$name'),
@@ -241,8 +275,12 @@ class _HazardGuideScreenState extends State<HazardGuideScreen> {
                         duration: const Duration(milliseconds: 150),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
-                          color: _tab == i ? AppColors.surface : Colors.transparent,
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusSmall - 2),
+                          color: _tab == i
+                              ? AppColors.surface
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusSmall - 2,
+                          ),
                         ),
                         alignment: Alignment.center,
                         child: Text(
@@ -250,7 +288,9 @@ class _HazardGuideScreenState extends State<HazardGuideScreen> {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
-                            color: _tab == i ? AppColors.brand : AppColors.inkMuted,
+                            color: _tab == i
+                                ? AppColors.brand
+                                : AppColors.inkMuted,
                           ),
                         ),
                       ),
@@ -296,7 +336,9 @@ class _HazardGuideScreenState extends State<HazardGuideScreen> {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.md),
-                          Expanded(child: Text(steps[i], style: AppTextStyles.body)),
+                          Expanded(
+                            child: Text(steps[i], style: AppTextStyles.body),
+                          ),
                         ],
                       ),
                     ),
@@ -309,12 +351,18 @@ class _HazardGuideScreenState extends State<HazardGuideScreen> {
             decoration: BoxDecoration(
               color: AppColors.brandSoft,
               borderRadius: BorderRadius.circular(AppSpacing.radius),
-              border: Border.all(color: AppColors.brand.withValues(alpha: 0.25)),
+              border: Border.all(
+                color: AppColors.brand.withValues(alpha: 0.25),
+              ),
             ),
             child: const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.brand),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  size: 16,
+                  color: AppColors.brand,
+                ),
                 SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
@@ -334,6 +382,36 @@ class _HazardGuideScreenState extends State<HazardGuideScreen> {
 
 /// El kit de emergencia: una lista de lo básico que conviene tener listo.
 ///
+/// Una de las dos tarjetas de «Prepárate»: el icono arriba y el nombre abajo.
+class _PrepareCard extends StatelessWidget {
+  const _PrepareCard({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          IconBubble.neutral(icon: icon, size: 38),
+          const SizedBox(height: AppSpacing.sm),
+          Text(label, style: AppTextStyles.itemTitle.copyWith(fontSize: 14)),
+        ],
+      ),
+    );
+  }
+}
+
 class _GuideError extends StatelessWidget {
   const _GuideError({required this.onRetry});
 
