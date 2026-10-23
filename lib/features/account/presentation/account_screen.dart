@@ -19,6 +19,7 @@ import '../../onboarding/domain/enrollment.dart';
 import '../../onboarding/domain/person_name.dart';
 import '../../onboarding/presentation/widgets/identity_card.dart';
 import '../domain/account_repository.dart';
+import 'add_child_screen.dart';
 import 'alert_preferences_screen.dart';
 import 'alerts_feed_screen.dart';
 import 'support_screen.dart';
@@ -52,6 +53,7 @@ class _AccountScreenState extends State<AccountScreen> {
   bool get _usesPassword => _person.role.usesPassword;
   bool get _isStudent => _person is StudentEnrollment;
   bool get _isAdmin => _person is AdminEnrollment;
+  bool get _isGuardian => _person is GuardianEnrollment;
 
   AccountRepository? get _repository => AppScope.of(context).accountRepository;
 
@@ -82,7 +84,11 @@ class _AccountScreenState extends State<AccountScreen> {
     }
   }
 
-  Future<void> _update({bool? criticalAlerts, bool? shareLocation}) async {
+  Future<void> _update({
+    bool? criticalAlerts,
+    bool? shareLocation,
+    bool? notifyChildSafe,
+  }) async {
     final AccountSettings? before = _settings;
     final AccountRepository? repository = _repository;
     if (before == null || repository == null) return;
@@ -90,13 +96,18 @@ class _AccountScreenState extends State<AccountScreen> {
     // Se ve el cambio de inmediato; si el servidor no lo guarda, vuelve atrás y
     // se dice, en vez de dejar un interruptor que miente.
     setState(() {
-      _settings = before.copyWith(criticalAlerts: criticalAlerts, shareLocation: shareLocation);
+      _settings = before.copyWith(
+        criticalAlerts: criticalAlerts,
+        shareLocation: shareLocation,
+        notifyChildSafe: notifyChildSafe,
+      );
       _error = null;
     });
     try {
       final AccountSettings saved = await repository.updateSettings(
         criticalAlerts: criticalAlerts,
         shareLocation: shareLocation,
+        notifyChildSafe: notifyChildSafe,
       );
       if (mounted) setState(() => _settings = saved);
     } catch (error, stack) {
@@ -138,6 +149,8 @@ class _AccountScreenState extends State<AccountScreen> {
 
   Future<void> _push(WidgetBuilder builder) => pushInShell<void>(context, builder);
 
+  void _addChild() => _push((_) => const AddChildScreen());
+
   Future<void> _changePassword() async {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     final bool changed = await showChangePassword(context);
@@ -167,7 +180,7 @@ class _AccountScreenState extends State<AccountScreen> {
         children: <Widget>[
           _Header(person: person, school: school),
           const SizedBox(height: AppSpacing.md),
-          IdentityCard(children: _details(person)),
+          IdentityCard(children: _details(person, onAddChild: _addChild)),
           const SizedBox(height: AppSpacing.sm),
           LockedDataNote(
             message: _usesPassword
@@ -176,7 +189,37 @@ class _AccountScreenState extends State<AccountScreen> {
                 : 'El colegio registró estos datos. Si algo está mal, avisa en '
                     'secretaría.',
           ),
-          if (!_isAdmin && _settings != null) ...<Widget>[
+          if (_isGuardian && _settings != null) ...<Widget>[
+            const SectionLabel('Avisos'),
+            AppCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: <Widget>[
+                  const _Row(
+                    icon: Icons.notifications_none,
+                    title: 'Alertas del colegio',
+                    subtitle: 'Siempre activas para acudientes',
+                  ),
+                  const Divider(height: 1),
+                  _Row(
+                    icon: Icons.check_circle_outline,
+                    title: 'Cuando mi hijo confirme a salvo',
+                    subtitle: 'Un aviso apenas marque «Estoy a salvo»',
+                    switchKey: const Key('ajuste-hijo-a-salvo'),
+                    value: _settings!.notifyChildSafe,
+                    onChanged: (bool v) => _update(notifyChildSafe: v),
+                  ),
+                  const Divider(height: 1),
+                  _Row(
+                    icon: Icons.history,
+                    title: 'Alertas y avisos',
+                    subtitle: 'Historial de tu colegio',
+                    onTap: () => _push((_) => const AlertsFeedScreen()),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (!_isAdmin && _settings != null) ...<Widget>[
             const SectionLabel('Tus ajustes'),
             AppCard(
               padding: EdgeInsets.zero,
@@ -291,7 +334,7 @@ class _AccountScreenState extends State<AccountScreen> {
 
   /// Los datos de cada rol. Un `switch` sobre la clase sellada: si se agrega un
   /// rol nuevo, el compilador obliga a decidir qué se muestra aquí.
-  static List<Widget> _details(Enrollment person) {
+  static List<Widget> _details(Enrollment person, {required VoidCallback onAddChild}) {
     return switch (person) {
       TeacherEnrollment() => <Widget>[
           if (person.email != null) ...<Widget>[
@@ -320,14 +363,32 @@ class _AccountScreenState extends State<AccountScreen> {
       GuardianEnrollment() => <Widget>[
           DetailRow(label: 'Celular registrado', value: person.maskedPhone),
           const Divider(height: 1),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.lg,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
               AppSpacing.lg,
               AppSpacing.sm,
+              AppSpacing.sm,
+              AppSpacing.xs,
             ),
-            child: Text('HIJOS VINCULADOS', style: AppTextStyles.eyebrow),
+            child: Row(
+              children: <Widget>[
+                const Expanded(
+                  child: Text('HIJOS VINCULADOS', style: AppTextStyles.eyebrow),
+                ),
+                TextButton(
+                  key: const Key('agregar-hijo'),
+                  onPressed: onAddChild,
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(44, 36),
+                    foregroundColor: AppColors.brand,
+                  ),
+                  child: const Text(
+                    '+ Agregar',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
           ),
           for (final LinkedStudent child in person.children)
             LinkedPersonRow(
