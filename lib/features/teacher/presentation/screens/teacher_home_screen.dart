@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/app_scope.dart';
 import '../../../../app/shell_scope.dart';
+import '../../../../core/errors/error_reporter.dart';
 import '../../../../shared/design/app_card.dart';
 import '../../../../shared/design/app_page.dart';
+import '../../../../shared/design/icon_bubble.dart';
 import '../../../../shared/design/section_label.dart';
+import '../../../../shared/format.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../account/presentation/alerts_feed_screen.dart';
 import '../../../drills/presentation/drills_screen.dart';
+import '../../../drills/domain/drill_repository.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -21,6 +25,7 @@ import '../../../onboarding/domain/enrollment.dart';
 import '../../../onboarding/domain/person_name.dart';
 import '../../../student/presentation/widgets/home_tile.dart';
 import 'group_roster_screen.dart';
+import '../../domain/teacher_repository.dart';
 import 'new_alert_screen.dart';
 
 /// El inicio del docente.
@@ -62,8 +67,14 @@ class TeacherHomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
               ],
+              if (teacher.emergencyTask != null) ...<Widget>[
+                _TaskCard(task: teacher.emergencyTask!),
+                const SizedBox(height: AppSpacing.md),
+              ],
               const SectionLabel('Ahora estás con', padding: EdgeInsets.only(bottom: AppSpacing.sm)),
               _CurrentGroupCard(teacher: teacher),
+              const SizedBox(height: AppSpacing.sm),
+              _GroupPulse(teacher: teacher),
               const SizedBox(height: AppSpacing.md),
               Row(
                 children: <Widget>[
@@ -169,6 +180,214 @@ class TeacherHomeScreen extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// «Tu papel en una emergencia»: lo que coordinación le asignó a este docente.
+class _TaskCard extends StatelessWidget {
+  const _TaskCard({required this.task});
+
+  final EmergencyTask task;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      key: const Key('tarea-docente'),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Text('TU PAPEL EN UNA EMERGENCIA', style: AppTextStyles.eyebrow),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: <Widget>[
+              const IconBubble(icon: Icons.groups_outlined, size: 38),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(task.title, style: AppTextStyles.itemTitle),
+                    if (task.detail != null && task.detail!.isNotEmpty)
+                      Text(task.detail!, style: AppTextStyles.caption),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          const Text(
+            'Asignado por Coordinación desde el panel del colegio.',
+            style: AppTextStyles.caption,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Tres cifras del grupo y el próximo simulacro, en calma.
+///
+/// Salen del servidor y se piden aquí; si fallan, el inicio sigue sirviendo sin
+/// ellas en vez de mostrar ceros que parecerían verdad.
+class _GroupPulse extends StatefulWidget {
+  const _GroupPulse({required this.teacher});
+
+  final TeacherEnrollment teacher;
+
+  @override
+  State<_GroupPulse> createState() => _GroupPulseState();
+}
+
+class _GroupPulseState extends State<_GroupPulse> {
+  GroupOverview? _overview;
+  Drill? _nextDrill;
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_started) {
+      _started = true;
+      _load();
+    }
+  }
+
+  Future<void> _load() async {
+    final AppScope scope = AppScope.of(context);
+    final String? grade = widget.teacher.primaryGroup;
+    final TeacherRepository? teachers = scope.teacherRepository;
+
+    if (grade != null && teachers != null) {
+      try {
+        final GroupOverview overview = await teachers.loadGroupOverview(grade);
+        if (mounted) setState(() => _overview = overview);
+      } catch (error, stack) {
+        ErrorReporter.report(error, stack, context: 'resumen del grupo');
+      }
+    }
+    try {
+      final DrillOverview? drills = await scope.drillRepository?.load();
+      if (mounted && drills != null) setState(() => _nextDrill = drills.next);
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'próximo simulacro');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final GroupOverview? overview = _overview;
+    final Drill? drill = _nextDrill;
+    if (overview == null && drill == null) return const SizedBox.shrink();
+
+    return Column(
+      children: <Widget>[
+        if (overview != null)
+          Row(
+            key: const Key('cifras-del-grupo'),
+            children: <Widget>[
+              Expanded(child: _Figure(value: '${overview.enrolled}', label: 'Estudiantes')),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _Figure(
+                  value: '${overview.appActive}',
+                  label: 'Con la app',
+                  color: AppColors.success,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _Figure(
+                  value: '${overview.needsSupport.length}',
+                  label: 'Necesita apoyo',
+                  color: overview.needsSupport.isEmpty ? AppColors.inkMuted : AppColors.brand,
+                ),
+              ),
+            ],
+          ),
+        if (drill != null) ...<Widget>[
+          const SizedBox(height: AppSpacing.sm),
+          AppCard(
+            key: const Key('simulacro-docente'),
+            onTap: () => pushInShell<void>(context, (_) => const DrillsScreen()),
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 48,
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.ink,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                  ),
+                  child: Column(
+                    children: <Widget>[
+                      Text(
+                        Fmt.monthTag(drill.scheduledAt),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      Text(
+                        '${drill.scheduledAt.day}',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Simulacro de ${drill.hazard.label.toLowerCase()}',
+                        style: AppTextStyles.itemTitle,
+                      ),
+                      Text(
+                        '${Fmt.hour(drill.scheduledAt)} · tú lo sabes; tus estudiantes, no',
+                        style: AppTextStyles.caption,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _Figure extends StatelessWidget {
+  const _Figure({required this.value, required this.label, this.color});
+
+  final String value;
+  final String label;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            value,
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color ?? AppColors.ink),
+          ),
+          Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTextStyles.caption),
+        ],
       ),
     );
   }
