@@ -2,6 +2,7 @@ import 'package:alertic/features/alerts/domain/alert.dart';
 import 'package:alertic/features/alerts/domain/alert_level.dart';
 import 'package:alertic/features/alerts/domain/hazard.dart';
 import 'package:alertic/features/alerts/presentation/screens/alert_screen.dart';
+import 'package:alertic/features/alerts/presentation/widgets/drill_timer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -144,6 +145,53 @@ void main() {
       expect(find.text('INCENDIO'), findsOneWidget);
       expect(find.text('Alerta roja · Evacuar ya'), findsOneWidget);
       expect(find.textContaining('Laboratorio 2'), findsOneWidget);
+    });
+  });
+
+  group('18 · simulacro · morado', () {
+    testWidgets('dice que es una práctica y no una emergencia', (WidgetTester tester) async {
+      await pumpAlert(
+        tester,
+        alertOf(
+          hazard: Hazard.sismo,
+          level: AlertLevel.roja,
+          scope: 'todo el colegio',
+          drill: true,
+        ),
+      );
+
+      expect(backgroundOf(tester), const Color(0xFF4B3F8F));
+      expect(find.byKey(const Key('banner-simulacro')), findsOneWidget);
+      expect(find.text('SIMULACRO · ESTO ES UNA PRÁCTICA'), findsOneWidget);
+      expect(find.text('Simulacro programado · todo el colegio'), findsOneWidget);
+      // La insignia de «alerta activa» no aparece: sería una mentira.
+      expect(find.text('● ALERTA ACTIVA'), findsNothing);
+    });
+
+    testWidgets('muestra la meta del colegio que se le pasa', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AlertScreen(
+            alert: alertOf(hazard: Hazard.sismo, level: AlertLevel.roja, drill: true),
+            onAcknowledge: () {},
+            drillGoal: const Duration(minutes: 4, seconds: 30),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('menos de 4:30'), findsOneWidget);
+    });
+  });
+
+  group('el reloj del simulacro', () {
+    test('cuenta desde la hora de emisión, en minutos y segundos', () {
+      expect(formatDrillTime(const Duration(seconds: 84)), '01:24');
+      expect(formatDrillTime(const Duration(minutes: 12, seconds: 5)), '12:05');
+    });
+
+    test('nunca muestra un tiempo negativo', () {
+      expect(formatDrillTime(const Duration(seconds: -30)), '00:00');
     });
   });
 }
