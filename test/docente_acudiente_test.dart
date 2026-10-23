@@ -285,6 +285,41 @@ void main() {
     });
   });
 
+  group('46 · alerta del docente con su tarea', () {
+    testWidgets('en roja ve su tarea, quién necesita apoyo y abre la lista de su grupo', (
+      WidgetTester tester,
+    ) async {
+      await signInWithPassword(tester, 'carlos.jaimes@iic.edu.co', 'Contabilidad2026');
+
+      alerts.simulate(AlertLevel.roja);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('tarea-en-alerta')), findsOneWidget);
+      expect(find.text('TU TAREA · DIRECTOR DE 10° B'), findsOneWidget);
+      expect(find.text('Pasa lista en la app apenas lleguen.'), findsOneWidget);
+      expect(
+        find.text('Juan Pérez necesita apoyo: lo acompañan Mateo y Sara.'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('abrir-lista-docente')));
+      await tester.pumpAndSettle();
+      expect(find.text('Lista del grupo'), findsOneWidget);
+    });
+
+    testWidgets('en amarilla lee las mismas instrucciones que todos', (
+      WidgetTester tester,
+    ) async {
+      await signInWithPassword(tester, 'carlos.jaimes@iic.edu.co', 'Contabilidad2026');
+
+      alerts.simulate(AlertLevel.amarilla);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('tarea-en-alerta')), findsNothing);
+      expect(find.text('QUÉ HACER AHORA'), findsOneWidget);
+    });
+  });
+
   group('bloque E · acudiente', () {
     testWidgets('en calma muestra a los hijos sin alarmar', (
       WidgetTester tester,
