@@ -241,7 +241,7 @@ class _Validated extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 const Text(
-                  'Acceso validado',
+                  'Código validado',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
