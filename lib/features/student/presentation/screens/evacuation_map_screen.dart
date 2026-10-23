@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/app_scope.dart';
+import '../../../../app/shell_scope.dart';
 import '../../../../core/errors/error_reporter.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -107,7 +108,7 @@ class _EvacuationMapScreenState extends State<EvacuationMapScreen> {
 
         return AppPage(
           title: 'Mapa de evacuación',
-          subtitle: 'Rutas y puntos de encuentro',
+          subtitle: ShellScope.maybeOf(context)?.schoolName ?? 'Rutas y puntos de encuentro',
           bottom: Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.screenGutter,
