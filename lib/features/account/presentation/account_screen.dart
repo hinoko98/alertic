@@ -19,6 +19,7 @@ import '../../onboarding/domain/enrollment.dart';
 import '../../onboarding/domain/person_name.dart';
 import '../../onboarding/presentation/widgets/identity_card.dart';
 import '../domain/account_repository.dart';
+import 'alert_preferences_screen.dart';
 import 'alerts_feed_screen.dart';
 import 'change_password_sheet.dart';
 import 'family_contacts_view.dart';
@@ -200,6 +201,14 @@ class _AccountScreenState extends State<AccountScreen> {
                     switchKey: const Key('ajuste-alertas'),
                     value: _settings!.criticalAlerts,
                     onChanged: (bool v) => _update(criticalAlerts: v),
+                  ),
+                  const Divider(height: 1),
+                  _Row(
+                    key: const Key('como-te-avisamos'),
+                    icon: Icons.volume_up_outlined,
+                    title: 'Cómo te avisamos',
+                    subtitle: 'Sonido, vibración y tamaño de letra',
+                    onTap: () => _push((_) => const AlertPreferencesScreen()),
                   ),
                   const Divider(height: 1),
                   _Row(
