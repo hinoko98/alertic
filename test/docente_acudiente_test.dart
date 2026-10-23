@@ -306,10 +306,14 @@ void main() {
       // llega la alerta.
       await tester.pumpAndSettle();
 
+      expect(find.byKey(const Key('aviso-alerta-acudiente')), findsOneWidget);
+      expect(find.textContaining('en el colegio ·'), findsOneWidget);
+      expect(find.text('QUÉ HACER COMO ACUDIENTE'), findsOneWidget);
       expect(
         find.textContaining('No vayas al colegio todavía'),
         findsOneWidget,
       );
+      expect(find.textContaining('Evita llamar a tus hijos'), findsOneWidget);
       expect(find.textContaining('A SALVO'), findsOneWidget);
       expect(find.text('SIN CONFIRMAR'), findsOneWidget);
       // Y explica por qué el de sexto no ha confirmado.

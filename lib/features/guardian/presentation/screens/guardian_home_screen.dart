@@ -204,6 +204,10 @@ class _GuardianHomeScreenState extends State<GuardianHomeScreen> {
               else
                 for (final ChildStatus child in _children)
                   _ChildCard(child: child, alertActive: active != null),
+              if (active != null) ...<Widget>[
+                const SizedBox(height: AppSpacing.sm),
+                const _WhatToDo(),
+              ],
               if (active == null && !_loading) ...<Widget>[
                 for (final ChildStatus child in _children)
                   if (!child.appActive)
@@ -390,45 +394,111 @@ class _AlertNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      key: const Key('aviso-alerta-acudiente'),
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.levelRed,
         borderRadius: BorderRadius.circular(AppSpacing.radius),
       ),
+      child: Row(
+        children: <Widget>[
+          Icon(hazardIcon(alert.hazard), size: 24, color: AppColors.onBrand),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '${_titleCase(alert.title)} en el colegio · ${alert.issuedAtLabel}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.onBrand,
+                  ),
+                ),
+                Text(
+                  'Alerta ${alert.level.label.toLowerCase()} · ${alert.level.meaning.toLowerCase()}',
+                  style: const TextStyle(fontSize: 13, color: AppColors.onBrand),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// `SISMO` → `Sismo`.
+  static String _titleCase(String title) {
+    final String lower = title.toLowerCase();
+    return lower.isEmpty ? lower : '${lower[0].toUpperCase()}${lower.substring(1)}';
+  }
+}
+
+/// Lo que la familia debe hacer —y no hacer— mientras dura la alerta.
+class _WhatToDo extends StatelessWidget {
+  const _WhatToDo();
+
+  static const List<String> _steps = <String>[
+    'No vayas al colegio todavía: las vías deben quedar libres.',
+    'Evita llamar a tus hijos: necesitan atención para evacuar.',
+    'Espera aquí el punto y la hora para recogerlos.',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const Key('que-hacer-acudiente'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.ink,
+        borderRadius: BorderRadius.circular(AppSpacing.radius),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            'ALERTA ${alert.level.label} · ${alert.issuedAtLabel}',
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2,
-              color: AppColors.onBrand,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            '${alert.title} · ${alert.scope}',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              height: 1.1,
-              color: AppColors.onBrand,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
           const Text(
-            'No vayas al colegio todavía. Te avisaremos el punto y la hora de '
-            'entrega.',
+            'QUÉ HACER COMO ACUDIENTE',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
-              height: 1.3,
-              color: AppColors.onBrand,
+              letterSpacing: 0.6,
+              color: Colors.white70,
             ),
           ),
+          const SizedBox(height: AppSpacing.md),
+          for (int i = 0; i < _steps.length; i++)
+            Padding(
+              padding: EdgeInsets.only(bottom: i == _steps.length - 1 ? 0 : AppSpacing.md),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Container(
+                    width: 22,
+                    height: 22,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    child: Text(
+                      '${i + 1}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Text(
+                      _steps[i],
+                      style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
