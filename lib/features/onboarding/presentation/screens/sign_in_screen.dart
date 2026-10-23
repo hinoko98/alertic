@@ -239,9 +239,10 @@ class _SignInScreenState extends State<SignInScreen> {
                             SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
-                                'Solo para docentes y responsables de ALERTIC en '
-                                'la institución. Si eres estudiante o acudiente, '
-                                'vuelve atrás y usa el código de tu carné.',
+                                'Tu usuario lo crea Coordinación en el panel del '
+                                'colegio, junto con tu grupo y tu papel en una '
+                                'emergencia. Si eres estudiante o acudiente, vuelve '
+                                'atrás y usa el código de tu carné.',
                                 style: TextStyle(fontSize: 11, color: AppColors.inkMuted),
                               ),
                             ),
@@ -304,7 +305,7 @@ class _DarkHeader extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               const Text(
-                'Docentes y coordinación',
+                'Personal del colegio',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
@@ -314,7 +315,7 @@ class _DarkHeader extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               const Text(
-                'Ingreso fijo, sin código de un solo uso.',
+                'Docentes, directivos y administrativos.',
                 style: TextStyle(fontSize: 12, color: Colors.white70),
               ),
             ],
