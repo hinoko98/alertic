@@ -213,6 +213,9 @@ void main() {
       await tester.tap(find.text('Estoy a salvo'));
       await tester.pumpAndSettle();
 
+      await tester.scrollUntilVisible(find.text('LISTA DEL GRUPO'), 200);
+      await tester.ensureVisible(find.text('LISTA DEL GRUPO'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('LISTA DEL GRUPO'));
       await tester.pumpAndSettle();
 
@@ -234,6 +237,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Estoy a salvo'));
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('LISTA DEL GRUPO'), 200);
+      await tester.ensureVisible(find.text('LISTA DEL GRUPO'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('LISTA DEL GRUPO'));
       await tester.pumpAndSettle();
 
@@ -244,6 +250,38 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('4'), findsOneWidget);
+    });
+  });
+
+  group('45 · inicio del docente', () {
+    testWidgets('muestra las cifras del grupo y el próximo simulacro', (
+      WidgetTester tester,
+    ) async {
+      drills.upcoming.add(
+        Drill(
+          id: 'd1',
+          hazard: Hazard.sismo,
+          scheduledAt: DateTime.now().add(const Duration(days: 2)),
+          scope: 'Todo el colegio',
+        ),
+      );
+      await signInWithPassword(tester, 'carlos.jaimes@iic.edu.co', 'Contabilidad2026');
+
+      expect(find.byKey(const Key('cifras-del-grupo')), findsOneWidget);
+      expect(find.text('32'), findsOneWidget);
+      expect(find.text('30'), findsOneWidget);
+      expect(find.text('Con la app'), findsOneWidget);
+      expect(find.text('Necesita apoyo'), findsOneWidget);
+      expect(find.byKey(const Key('simulacro-docente')), findsOneWidget);
+      expect(find.textContaining('tú lo sabes; tus estudiantes, no'), findsOneWidget);
+    });
+
+    testWidgets('sin tarea asignada no inventa «tu papel en una emergencia»', (
+      WidgetTester tester,
+    ) async {
+      await signInWithPassword(tester, 'carlos.jaimes@iic.edu.co', 'Contabilidad2026');
+
+      expect(find.byKey(const Key('tarea-docente')), findsNothing);
     });
   });
 
