@@ -61,6 +61,16 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  group('44 · inicio de sesión del personal', () {
+    testWidgets('dice a quién es y de dónde sale el usuario', (WidgetTester tester) async {
+      await openSignIn(tester);
+
+      expect(find.text('Personal del colegio'), findsOneWidget);
+      expect(find.text('Docentes, directivos y administrativos.'), findsOneWidget);
+      expect(find.textContaining('Tu usuario lo crea Coordinación'), findsOneWidget);
+    });
+  });
+
   Future<void> typeCredentials(
     WidgetTester tester,
     String email,
