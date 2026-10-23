@@ -67,7 +67,7 @@ void main() {
   Future<void> signInWithCode(WidgetTester tester, String code) async {
     await pumpApp(tester);
 
-    await tester.tap(find.text('Empezar'));
+    await tester.tap(find.text('Saltar'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();

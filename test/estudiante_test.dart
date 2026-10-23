@@ -67,7 +67,7 @@ void main() {
   /// abierta en el inicio del rol correspondiente.
   Future<void> signIn(WidgetTester tester, String code) async {
     await pumpApp(tester);
-    await tester.tap(find.text('Empezar'));
+    await tester.tap(find.text('Saltar'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
@@ -108,7 +108,7 @@ void main() {
       WidgetTester tester,
     ) async {
       await pumpApp(tester);
-      await tester.tap(find.text('Empezar'));
+      await tester.tap(find.text('Saltar'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Continuar'));
       await tester.pumpAndSettle();
@@ -532,7 +532,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(AccountScreen), findsNothing);
-      expect(find.text('Empezar'), findsOneWidget);
+      expect(find.text('Saltar'), findsOneWidget);
     });
 
     testWidgets('los contactos de familia: se suma uno, se quita, y el del colegio no', (

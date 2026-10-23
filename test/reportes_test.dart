@@ -70,7 +70,7 @@ void main() {
 
   Future<void> signInAsStudent(WidgetTester tester, {IncidentRepository? override}) async {
     await pumpApp(tester, override: override, phone: false);
-    await tester.tap(find.text('Empezar'));
+    await tester.tap(find.text('Saltar'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
