@@ -1,4 +1,5 @@
 import 'alert.dart';
+import 'evacuation_rating.dart';
 import 'meeting_point.dart';
 import 'protocol.dart';
 import 'safety_report.dart';
@@ -17,6 +18,9 @@ abstract interface class AlertRepository {
 
   /// Avisa que la persona leyó la alerta. Aplica a amarilla y naranja.
   Future<void> acknowledge(String alertId);
+
+  /// Cuenta cómo le fue a la persona en la evacuación, cuando la alerta termina.
+  Future<void> sendEvacuationFeedback(String alertId, EvacuationRating rating);
 
   /// Manda el estado de la persona durante una alerta roja.
   Future<void> submitSafetyReport(SafetyReport report);

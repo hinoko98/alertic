@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:alertic/features/alerts/domain/alert.dart';
 import 'package:alertic/features/alerts/domain/alert_level.dart';
 import 'package:alertic/features/alerts/domain/alert_repository.dart';
+import 'package:alertic/features/alerts/domain/evacuation_rating.dart';
 import 'package:alertic/features/alerts/domain/hazard.dart';
 import 'package:alertic/features/alerts/domain/meeting_point.dart';
 import 'package:alertic/features/alerts/domain/protocol.dart';
@@ -42,6 +43,15 @@ class FakeAlertRepository implements AlertRepository {
   Future<void> acknowledge(String alertId) async {
     await Future<void>.delayed(latency);
     // El servidor anota quién leyó la alerta. Aquí solo se simula la llamada.
+  }
+
+  /// Cómo dijo la persona que le fue en la evacuación.
+  final List<EvacuationRating> feedback = <EvacuationRating>[];
+
+  @override
+  Future<void> sendEvacuationFeedback(String alertId, EvacuationRating rating) async {
+    await Future<void>.delayed(latency);
+    feedback.add(rating);
   }
 
   /// Lo que la persona le mandó al colegio, para comprobarlo en las pruebas.

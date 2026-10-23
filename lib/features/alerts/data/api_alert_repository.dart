@@ -4,6 +4,7 @@ import '../../../core/errors/error_reporter.dart';
 import '../../../core/network/api_client.dart';
 import '../domain/alert.dart';
 import '../domain/alert_repository.dart';
+import '../domain/evacuation_rating.dart';
 import '../domain/hazard.dart';
 import '../domain/meeting_point.dart';
 import '../domain/protocol.dart';
@@ -46,6 +47,14 @@ class ApiAlertRepository implements AlertRepository {
   @override
   Future<void> acknowledge(String alertId) async {
     await _api.post('/alerts/$alertId/ack');
+  }
+
+  @override
+  Future<void> sendEvacuationFeedback(String alertId, EvacuationRating rating) async {
+    await _api.post(
+      '/alerts/$alertId/feedback',
+      body: <String, dynamic>{'rating': rating.wire},
+    );
   }
 
   @override

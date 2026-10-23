@@ -3,6 +3,7 @@ import 'package:alertic/core/session/user_role.dart';
 import 'package:alertic/features/account/domain/account_repository.dart';
 import 'package:alertic/features/account/presentation/account_screen.dart';
 import 'package:alertic/features/alerts/domain/alert_level.dart';
+import 'package:alertic/features/alerts/domain/evacuation_rating.dart';
 import 'package:alertic/features/alerts/domain/hazard.dart';
 import 'package:alertic/features/alerts/domain/safety_report.dart';
 import 'package:alertic/features/drills/domain/drill_repository.dart';
@@ -164,6 +165,47 @@ void main() {
   });
 
   group('la alerta entra por encima de todo', () {
+    testWidgets('al terminar una alerta roja dice que es seguro regresar y pregunta cómo le fue', (
+      WidgetTester tester,
+    ) async {
+      await signIn(tester, 'IICB7K4P');
+
+      alerts.simulate(AlertLevel.roja);
+      await tester.pumpAndSettle();
+      alerts.clear();
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('es-seguro-regresar')), findsOneWidget);
+      expect(find.text('Terminó la alerta de sismo. Regresa al salón con tu docente.'),
+          findsOneWidget);
+      // No respondió desde el celular: no se inventa una hora ni un tiempo.
+      expect(find.text('Confirmaste a salvo'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('opinion-regular')));
+      await tester.pumpAndSettle();
+      expect(alerts.feedback, <EvacuationRating>[EvacuationRating.fair]);
+      expect(find.textContaining('Gracias.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('volver-al-inicio')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('es-seguro-regresar')), findsNothing);
+    });
+
+    testWidgets('una alerta amarilla que termina se apaga sin pantalla de despedida', (
+      WidgetTester tester,
+    ) async {
+      await signIn(tester, 'IICB7K4P');
+
+      alerts.simulate(AlertLevel.amarilla);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Entendido'));
+      await tester.pumpAndSettle();
+      alerts.clear();
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('es-seguro-regresar')), findsNothing);
+    });
+
     testWidgets('en amarilla se puede reportar algo peligroso sin salir de la alerta', (
       WidgetTester tester,
     ) async {

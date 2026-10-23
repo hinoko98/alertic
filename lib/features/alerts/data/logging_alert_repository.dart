@@ -2,6 +2,7 @@ import '../../../core/errors/error_reporter.dart';
 import '../../../core/security/redaction.dart';
 import '../domain/alert.dart';
 import '../domain/alert_repository.dart';
+import '../domain/evacuation_rating.dart';
 import '../domain/meeting_point.dart';
 import '../domain/protocol.dart';
 import '../domain/safety_report.dart';
@@ -38,6 +39,14 @@ class LoggingAlertRepository implements AlertRepository {
     return _timed(
       'acknowledge($alertId)',
       () => _inner.acknowledge(alertId),
+    );
+  }
+
+  @override
+  Future<void> sendEvacuationFeedback(String alertId, EvacuationRating rating) {
+    return _timed(
+      'opinión de la evacuación ${rating.wire}',
+      () => _inner.sendEvacuationFeedback(alertId, rating),
     );
   }
 
