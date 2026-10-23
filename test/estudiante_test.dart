@@ -545,7 +545,7 @@ void main() {
       await tester.tap(find.byKey(const Key('contactos-de-familia')));
       await tester.pumpAndSettle();
       expect(find.text('Martha Gómez Rueda'), findsOneWidget);
-      expect(find.text('Acudiente'), findsOneWidget);
+      expect(find.text('Vinculado'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('agregar-contacto')));
       await tester.pumpAndSettle();

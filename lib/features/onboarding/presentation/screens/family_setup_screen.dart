@@ -40,12 +40,12 @@ class FamilySetupScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            '¿A quién avisamos cuando estés a salvo?',
+            'Ellos sabrán que estás a salvo',
             style: AppTextStyles.screenTitle,
           ),
           SizedBox(height: AppSpacing.sm),
           Text(
-            'El colegio ya registró a tu acudiente. Puedes sumar a alguien más.',
+            'Tus acudientes se vinculan desde su propio celular con tu documento. Aquí ves quién ya está conectado.',
             style: AppTextStyles.caption,
           ),
           SizedBox(height: AppSpacing.lg),

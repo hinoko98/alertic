@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../app/app_scope.dart';
 import '../../../core/errors/error_reporter.dart';
@@ -8,6 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/design/pill.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../../shared/widgets/secondary_button.dart';
 import '../domain/account_repository.dart';
 
 /// A quién se avisa cuando la persona confirma que está a salvo.
@@ -171,6 +173,8 @@ class _FamilyContactsViewState extends State<FamilyContactsView> {
                 ),
         ),
         const SizedBox(height: AppSpacing.md),
+        const _ShareCard(),
+        const SizedBox(height: AppSpacing.md),
         _DashedButton(
           key: const Key('agregar-contacto'),
           label: 'Agregar contacto',
@@ -198,7 +202,7 @@ class _FamilyContactsViewState extends State<FamilyContactsView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text('Avisar automáticamente', style: AppTextStyles.itemTitle),
+                    Text('Avisarles automáticamente', style: AppTextStyles.itemTitle),
                     SizedBox(height: 2),
                     Text(
                       'Cuando marques «Estoy a salvo», les llega un aviso con tu '
@@ -223,6 +227,54 @@ class _FamilyContactsViewState extends State<FamilyContactsView> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// «¿Falta alguien de tu familia?»: los acudientes se vinculan desde su propio
+/// celular, así que lo único que se les puede dar es el paso a paso. Se copia al
+/// portapapeles para pegarlo donde la persona quiera.
+class _ShareCard extends StatelessWidget {
+  const _ShareCard();
+
+  static const String _howTo = 'Descarga ALERTIC, elige «Acudiente» y busca a tu '
+      'hijo o hija con su documento. El colegio confirma la vinculación.';
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radius),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Text('¿Falta alguien de tu familia?', style: AppTextStyles.itemTitle),
+          const SizedBox(height: 4),
+          const Text(
+            'Pídele que descargue ALERTIC, elija «Acudiente» y busque tu '
+            'documento. El colegio confirma la vinculación.',
+            style: AppTextStyles.caption,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SecondaryButton(
+            key: const Key('compartir-registro'),
+            label: 'Compartir cómo registrarse',
+            icon: Icons.share_outlined,
+            onPressed: () async {
+              final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+              await Clipboard.setData(const ClipboardData(text: _howTo));
+              messenger.showSnackBar(
+                const SnackBar(content: Text('Copiamos el paso a paso para compartirlo.')),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }
@@ -277,7 +329,7 @@ class _ContactRow extends StatelessWidget {
             ),
           ),
           if (contact.fromSchool)
-            const Pill('Acudiente', tone: PillTone.success)
+            const Pill('Vinculado', tone: PillTone.success)
           else ...<Widget>[
             const Pill('Agregado'),
             IconButton(
