@@ -1,6 +1,7 @@
 import '../../../core/network/api_client.dart';
 import '../../onboarding/domain/school.dart';
 import '../domain/account_repository.dart';
+import '../../onboarding/domain/guardian_link.dart';
 import '../domain/evacuation_support.dart';
 
 /// Ajustes, contactos e historial de avisos contra la API.
@@ -27,6 +28,7 @@ class ApiAccountRepository implements AccountRepository {
     bool? criticalAlerts,
     bool? shareLocation,
     bool? notifyFamily,
+    bool? notifyChildSafe,
     String? medicalInfo,
     bool clearMedicalInfo = false,
   }) async {
@@ -34,9 +36,38 @@ class ApiAccountRepository implements AccountRepository {
       'criticalAlerts': ?criticalAlerts,
       'shareLocation': ?shareLocation,
       'notifyFamily': ?notifyFamily,
+      'notifyChildSafe': ?notifyChildSafe,
       if (clearMedicalInfo) 'medicalInfo': null else 'medicalInfo': ?medicalInfo,
     };
     return _settings((await _api.patch('/me/settings', body: body))['settings']);
+  }
+
+  @override
+  Future<StudentMatch> lookupChild(String document) async {
+    final Map<String, dynamic> raw =
+        await _api.post('/me/children/lookup', body: <String, dynamic>{'document': document});
+    final Object? student = raw['student'];
+    if (student is! Map<String, dynamic>) {
+      throw StateError('el servidor no devolvió el estudiante');
+    }
+    return StudentMatch(
+      maskedName: student['maskedName'] as String? ?? '',
+      grade: student['grade'] as String? ?? '',
+      shift: student['shift'] as String? ?? '',
+      maskedDocument: student['maskedDocument'] as String? ?? '',
+      document: document,
+    );
+  }
+
+  @override
+  Future<void> requestChild(String document, GuardianRelationship relationship) async {
+    await _api.post(
+      '/me/children/requests',
+      body: <String, dynamic>{
+        'studentDocument': document,
+        'relationship': relationship.label,
+      },
+    );
   }
 
   @override
@@ -121,6 +152,7 @@ class ApiAccountRepository implements AccountRepository {
       criticalAlerts: map['criticalAlerts'] as bool? ?? true,
       shareLocation: map['shareLocation'] as bool? ?? true,
       notifyFamily: map['notifyFamily'] as bool? ?? true,
+      notifyChildSafe: map['notifyChildSafe'] as bool? ?? true,
       medicalInfo: map['medicalInfo'] as String?,
     );
   }

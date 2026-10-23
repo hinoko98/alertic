@@ -1,5 +1,6 @@
 import 'package:alertic/features/account/domain/account_repository.dart';
 import 'package:alertic/features/account/domain/evacuation_support.dart';
+import 'package:alertic/features/onboarding/domain/guardian_link.dart';
 import 'package:alertic/features/onboarding/domain/school.dart';
 
 /// Ajustes, contactos e historial en memoria, solo para pruebas.
@@ -33,6 +34,31 @@ class FakeAccountRepository implements AccountRepository {
   List<SupportBuddy> buddies = const <SupportBuddy>[
     SupportBuddy(fullName: 'Mateo Pinzón', detail: 'Compañero · 9.° B'),
   ];
+
+  /// Las solicitudes de hijo que mandó la persona: documento y parentesco.
+  final List<({String document, GuardianRelationship relationship})> childRequests =
+      <({String document, GuardianRelationship relationship})>[];
+
+  @override
+  Future<StudentMatch> lookupChild(String document) async {
+    await _wait();
+    if (document.replaceAll(RegExp(r'\D'), '') != '1098765434') {
+      throw StateError('estudiante_no_encontrado');
+    }
+    return const StudentMatch(
+      maskedName: 'Sofía A••••• V•••••',
+      grade: '10° B',
+      shift: 'Mañana',
+      maskedDocument: '•••5434',
+      document: '1098765434',
+    );
+  }
+
+  @override
+  Future<void> requestChild(String document, GuardianRelationship relationship) async {
+    await _wait();
+    childRequests.add((document: document, relationship: relationship));
+  }
 
   @override
   Future<SupportOverview> loadSupport() async {
@@ -78,6 +104,7 @@ class FakeAccountRepository implements AccountRepository {
       criticalAlerts: settings.criticalAlerts,
       shareLocation: settings.shareLocation,
       notifyFamily: settings.notifyFamily,
+      notifyChildSafe: settings.notifyChildSafe,
       medicalInfo: medical,
     );
   }
@@ -87,6 +114,7 @@ class FakeAccountRepository implements AccountRepository {
     bool? criticalAlerts,
     bool? shareLocation,
     bool? notifyFamily,
+    bool? notifyChildSafe,
     String? medicalInfo,
     bool clearMedicalInfo = false,
   }) async {
@@ -95,6 +123,7 @@ class FakeAccountRepository implements AccountRepository {
       criticalAlerts: criticalAlerts,
       shareLocation: shareLocation,
       notifyFamily: notifyFamily,
+      notifyChildSafe: notifyChildSafe,
     );
     if (clearMedicalInfo) medical = null;
     if (medicalInfo != null) medical = medicalInfo;
