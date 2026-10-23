@@ -2,6 +2,7 @@ import 'package:alertic/app/role_experience.dart';
 import 'package:alertic/core/session/user_role.dart';
 import 'package:alertic/features/account/domain/account_repository.dart';
 import 'package:alertic/features/account/presentation/account_screen.dart';
+import 'package:alertic/features/account/domain/alert_preferences.dart';
 import 'package:alertic/features/alerts/domain/alert_level.dart';
 import 'package:alertic/features/alerts/domain/evacuation_rating.dart';
 import 'package:alertic/features/alerts/domain/hazard.dart';
@@ -9,6 +10,7 @@ import 'package:alertic/features/alerts/domain/safety_report.dart';
 import 'package:alertic/features/drills/domain/drill_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/fakes/fake_account_repository.dart';
 import 'support/fakes/fake_alert_repository.dart';
@@ -589,6 +591,31 @@ void main() {
 
       expect(find.byType(AccountScreen), findsNothing);
       expect(find.text('Saltar'), findsOneWidget);
+    });
+
+    testWidgets('«Cómo te avisamos» guarda la vibración y la letra en el celular', (
+      WidgetTester tester,
+    ) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      await signIn(tester, 'IICB7K4P');
+      await tester.tap(find.text('Perfil'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('como-te-avisamos')));
+      await tester.tap(find.byKey(const Key('como-te-avisamos')));
+      await tester.pumpAndSettle();
+      expect(find.text('Sonar aunque esté en silencio'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('aviso-vibracion')));
+      await tester.tap(find.byKey(const Key('letra-grande')));
+      await tester.tap(find.byKey(const Key('guardar-avisos')));
+      await tester.pumpAndSettle();
+
+      final AlertPreferences saved = await AlertPreferencesStore.load();
+      expect(saved.strongVibration, isTrue);
+      expect(saved.textSize, AlertTextSize.large);
+      // Guardar vuelve al perfil.
+      expect(find.byKey(const Key('guardar-avisos')), findsNothing);
     });
 
     testWidgets('los contactos de familia: se suma uno, se quita, y el del colegio no', (
