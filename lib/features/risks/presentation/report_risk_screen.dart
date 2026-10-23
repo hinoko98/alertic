@@ -13,12 +13,10 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../shared/design/app_card.dart';
 import '../../../shared/design/app_page.dart';
-import '../../../shared/design/pill.dart';
 import '../../../shared/design/section_label.dart';
-import '../../../shared/format.dart';
 import '../../../shared/widgets/primary_button.dart';
-import '../../alerts/domain/live_updates.dart';
 import '../domain/risk_repository.dart';
+import 'my_reports_screen.dart';
 import 'report_sent_screen.dart';
 
 /// Pantalla 15: reportar un riesgo.
@@ -43,27 +41,11 @@ class _ReportRiskScreenState extends State<ReportRiskScreen> {
   final TextEditingController _place = TextEditingController();
   final TextEditingController _details = TextEditingController();
 
-  List<RiskReport> _mine = <RiskReport>[];
-  StreamSubscription<LiveChange>? _live;
   bool _sending = false;
   String? _error;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_live == null) {
-      _live = AppScope.of(context)
-          .liveUpdates
-          .changes
-          .where((LiveChange c) => c == LiveChange.myRiskReport)
-          .listen((_) => _loadMine());
-      _loadMine();
-    }
-  }
-
-  @override
   void dispose() {
-    _live?.cancel();
     _place.dispose();
     _details.dispose();
     super.dispose();
@@ -71,14 +53,15 @@ class _ReportRiskScreenState extends State<ReportRiskScreen> {
 
   RiskRepository get _repository => AppScope.of(context).riskRepository!;
 
-  Future<void> _loadMine() async {
-    try {
-      final List<RiskReport> reports = await _repository.loadMine();
-      if (mounted) setState(() => _mine = reports);
-    } catch (error, stack) {
-      // La lista de «mis reportes» es un extra: reportar sigue sirviendo sin ella.
-      ErrorReporter.report(error, stack, context: 'mis reportes');
-    }
+  /// «Mis reportes»: la lista con sus contadores. «Nuevo reporte» vuelve aquí.
+  Future<void> _openMine() {
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (BuildContext mineContext) => MyReportsScreen(
+          onNewReport: () => Navigator.of(mineContext).pop(),
+        ),
+      ),
+    );
   }
 
   /// La pantalla «Reporte enviado». «Ver mis reportes» y «Volver al inicio» la
@@ -90,7 +73,10 @@ class _ReportRiskScreenState extends State<ReportRiskScreen> {
       MaterialPageRoute<void>(
         builder: (BuildContext sentContext) => ReportSentScreen(
           report: sent,
-          onSeeMine: () => Navigator.of(sentContext).pop(),
+          onSeeMine: () {
+            Navigator.of(sentContext).pop();
+            _openMine();
+          },
           onHome: () {
             Navigator.of(sentContext).pop();
             shell?.openTab('Inicio');
@@ -129,7 +115,6 @@ class _ReportRiskScreenState extends State<ReportRiskScreen> {
         _place.clear();
         _details.clear();
       });
-      await _loadMine();
       if (!mounted) return;
       await _showSent(sent);
     } on ApiException catch (error) {
@@ -152,6 +137,24 @@ class _ReportRiskScreenState extends State<ReportRiskScreen> {
     return AppPage(
       title: 'Reportar un riesgo',
       subtitle: 'Llega al comité de gestión del riesgo',
+      actions: <Widget>[
+        Material(
+          color: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(999),
+          child: InkWell(
+            key: const Key('abrir-mis-reportes'),
+            borderRadius: BorderRadius.circular(999),
+            onTap: _openMine,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Text(
+                'Mis reportes',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.ink),
+              ),
+            ),
+          ),
+        ),
+      ],
       bottom: SafeArea(
         top: false,
         child: Padding(
@@ -270,58 +273,6 @@ class _ReportRiskScreenState extends State<ReportRiskScreen> {
                 style: AppTextStyles.caption.copyWith(color: AppColors.brand),
               ),
             ),
-          if (_mine.isNotEmpty) ...<Widget>[
-            const SectionLabel('Mis reportes'),
-            AppCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: <Widget>[
-                  for (int i = 0; i < _mine.length; i++) ...<Widget>[
-                    if (i > 0) const Divider(height: 1),
-                    _MineRow(report: _mine[i]),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _MineRow extends StatelessWidget {
-  const _MineRow({required this.report});
-
-  final RiskReport report;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(report.kind.label, style: AppTextStyles.itemTitle.copyWith(fontSize: 13)),
-                Text(
-                  '${report.place} · ${Fmt.ago(report.createdAt)}',
-                  style: AppTextStyles.caption,
-                ),
-              ],
-            ),
-          ),
-          Pill(
-            report.status.label,
-            tone: switch (report.status) {
-              RiskStatus.nuevo => PillTone.neutral,
-              RiskStatus.enRevision => PillTone.warning,
-              RiskStatus.atendido => PillTone.success,
-              RiskStatus.descartado => PillTone.neutral,
-            },
-          ),
         ],
       ),
     );
