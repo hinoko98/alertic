@@ -125,4 +125,25 @@ void main() {
       expect(find.text('Reportar algo peligroso'), findsNothing);
     });
   });
+
+  group('17 · incendio · naranja quemado', () {
+    testWidgets('el fondo es el naranja de las llamas y se lee qué zona evitar', (
+      WidgetTester tester,
+    ) async {
+      await pumpAlert(
+        tester,
+        alertOf(
+          hazard: Hazard.incendio,
+          level: AlertLevel.roja,
+          title: 'INCENDIO',
+          scope: 'Laboratorio 2 · tu ruta evita esa zona',
+        ),
+      );
+
+      expect(backgroundOf(tester), const Color(0xFFB84A00));
+      expect(find.text('INCENDIO'), findsOneWidget);
+      expect(find.text('Alerta roja · Evacuar ya'), findsOneWidget);
+      expect(find.textContaining('Laboratorio 2'), findsOneWidget);
+    });
+  });
 }
