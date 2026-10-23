@@ -120,6 +120,23 @@ class GuardianDraft {
   }
 }
 
+/// Lo que viaja de un paso al siguiente del registro del acudiente.
+class GuardianStepArgs {
+  const GuardianStepArgs({
+    required this.draft,
+    this.student,
+    this.requests = const <LinkRequest>[],
+  });
+
+  final GuardianDraft draft;
+
+  /// El estudiante que se acaba de encontrar y falta confirmar.
+  final StudentMatch? student;
+
+  /// Las solicitudes ya enviadas (último paso).
+  final List<LinkRequest> requests;
+}
+
 /// Una solicitud ya enviada al colegio, por un hijo.
 class LinkRequest {
   const LinkRequest({
