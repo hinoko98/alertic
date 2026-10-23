@@ -1,4 +1,5 @@
 import '../../onboarding/domain/school.dart';
+import '../../onboarding/domain/guardian_link.dart';
 import 'evacuation_support.dart';
 
 /// Los ajustes de una persona.
@@ -7,6 +8,7 @@ class AccountSettings {
     required this.criticalAlerts,
     required this.shareLocation,
     required this.notifyFamily,
+    this.notifyChildSafe = true,
     this.medicalInfo,
   });
 
@@ -19,6 +21,9 @@ class AccountSettings {
   /// Avisar a la familia cuando la persona confirma que está a salvo.
   final bool notifyFamily;
 
+  /// Del acudiente: recibir el aviso cuando su hijo confirma que está a salvo.
+  final bool notifyChildSafe;
+
   /// Lo que la persona anotó para un brigadista: alergias, medicamentos.
   final String? medicalInfo;
 
@@ -26,11 +31,13 @@ class AccountSettings {
     bool? criticalAlerts,
     bool? shareLocation,
     bool? notifyFamily,
+    bool? notifyChildSafe,
   }) =>
       AccountSettings(
         criticalAlerts: criticalAlerts ?? this.criticalAlerts,
         shareLocation: shareLocation ?? this.shareLocation,
         notifyFamily: notifyFamily ?? this.notifyFamily,
+        notifyChildSafe: notifyChildSafe ?? this.notifyChildSafe,
         medicalInfo: medicalInfo,
       );
 }
@@ -114,6 +121,7 @@ abstract interface class AccountRepository {
     bool? criticalAlerts,
     bool? shareLocation,
     bool? notifyFamily,
+    bool? notifyChildSafe,
     String? medicalInfo,
     bool clearMedicalInfo = false,
   });
@@ -123,6 +131,12 @@ abstract interface class AccountRepository {
   Future<List<FamilyContact>> removeContact(String id);
 
   Future<List<FeedItem>> loadFeed();
+
+  /// Busca a un estudiante por su documento para agregarlo como hijo (acudiente).
+  Future<StudentMatch> lookupChild(String document);
+
+  /// Pide vincular a otro hijo. El colegio la aprueba antes de que aparezca.
+  Future<void> requestChild(String document, GuardianRelationship relationship);
 
   /// El apoyo para evacuar de la persona y quién va por ella.
   Future<SupportOverview> loadSupport();
