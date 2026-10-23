@@ -12,6 +12,8 @@ import '../../domain/alert.dart';
 import '../../domain/alert_level.dart';
 import '../../domain/hazard.dart';
 import '../../domain/safety_report.dart';
+import '../../../teacher/presentation/screens/group_roster_screen.dart';
+import '../../../teacher/presentation/widgets/teacher_alert_task.dart';
 import '../widgets/alert_level_style.dart';
 import '../widgets/alert_palette.dart';
 import '../widgets/drill_timer.dart';
@@ -39,8 +41,13 @@ class AlertScreen extends StatelessWidget {
     this.drillGoal = const Duration(minutes: 5),
     this.strongVibration = false,
     this.textScale = 1.0,
+    this.teacher,
     super.key,
   });
+
+  /// El docente que recibe la alerta, si lo es. Con él la pantalla muestra su
+  /// tarea y abre la lista de su grupo.
+  final TeacherEnrollment? teacher;
 
   /// Vibrar fuerte al aparecer (preferencia de la persona o apoyo para evacuar).
   final bool strongVibration;
@@ -115,7 +122,12 @@ class AlertScreen extends StatelessWidget {
                         DrillTimer(startedAt: alert.issuedAt, goal: drillGoal),
                         const SizedBox(height: AppSpacing.md),
                       ],
-                      _Instructions(alert: alert, style: style, palette: palette),
+                      // Solo cuando hay que evacuar: en amarilla y naranja el docente
+                      // lee las mismas instrucciones que todos.
+                      if (teacher != null && alert.level.requiresResponse)
+                        TeacherAlertTask(alert: alert, teacher: teacher!)
+                      else
+                        _Instructions(alert: alert, style: style, palette: palette),
                       if (alert.coordinatorNote != null) ...<Widget>[
                         const SizedBox(height: AppSpacing.md),
                         _CoordinatorNote(alert: alert, palette: palette),
@@ -129,6 +141,7 @@ class AlertScreen extends StatelessWidget {
                 style: style,
                 palette: palette,
                 student: student,
+                teacher: teacher,
                 onAcknowledge: onAcknowledge,
                 onRespond: onRespond,
                 onResponded: onResponded,
@@ -419,6 +432,7 @@ class _Actions extends StatelessWidget {
     required this.style,
     required this.palette,
     required this.student,
+    required this.teacher,
     required this.onAcknowledge,
     required this.onRespond,
     required this.onResponded,
@@ -428,6 +442,7 @@ class _Actions extends StatelessWidget {
   final AlertLevelStyle style;
   final AlertPalette palette;
   final StudentEnrollment? student;
+  final TeacherEnrollment? teacher;
   final VoidCallback onAcknowledge;
   final ValueChanged<SafetyStatus>? onRespond;
   final VoidCallback? onResponded;
@@ -558,11 +573,28 @@ class _Actions extends StatelessWidget {
             ],
           ]
           else ...<Widget>[
+            if (teacher?.primaryGroup != null) ...<Widget>[
+              _AlertButton(
+                key: const Key('abrir-lista-docente'),
+                label: 'Abrir lista de ${teacher!.primaryGroup}',
+                icon: Icons.people_outline,
+                background: Colors.white,
+                foreground: palette.accent,
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (BuildContext context) =>
+                        GroupRosterScreen(alert: alert, grade: teacher!.primaryGroup!),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
             _AlertButton(
               label: style.primaryAction,
               icon: Icons.check,
-              background: Colors.white,
-              foreground: palette.accent,
+              background: teacher?.primaryGroup != null ? Colors.transparent : Colors.white,
+              foreground: teacher?.primaryGroup != null ? AppColors.onBrand : palette.accent,
+              border: teacher?.primaryGroup != null ? Colors.white70 : null,
               onPressed: () => onRespond?.call(SafetyStatus.safe),
             ),
             const SizedBox(height: AppSpacing.sm),

@@ -213,6 +213,7 @@ class _AlertGateState extends State<AlertGate> {
       strongVibration: _preferences.strongVibration,
       textScale: _preferences.textSize.scale,
       student: profile is StudentEnrollment ? profile : null,
+      teacher: profile is TeacherEnrollment ? profile : null,
       onResponded: () {
         _markAnswered();
         setState(() => _handledId = alert.id);
