@@ -9,6 +9,7 @@ import '../../../student/presentation/screens/guided_route_screen.dart';
 import '../../../student/presentation/screens/safe_check_in_screen.dart';
 import '../../domain/alert.dart';
 import '../../domain/alert_level.dart';
+import '../../domain/hazard.dart';
 import '../../domain/safety_report.dart';
 import '../widgets/alert_level_style.dart';
 import '../widgets/alert_palette.dart';
@@ -389,7 +390,7 @@ class _Actions extends StatelessWidget {
           if (studentMustRespond) ...<Widget>[
             _AlertButton(
               key: const Key('ver-mi-ruta'),
-              label: 'Ver mi ruta de evacuación',
+              label: _routeLabel(alert),
               icon: Icons.map_outlined,
               background: Colors.white,
               foreground: palette.accent,
@@ -441,6 +442,32 @@ class _Actions extends StatelessWidget {
                 ),
               ],
             ),
+          ] else if (who != null && alert.level == AlertLevel.naranja) ...<Widget>[
+            // En naranja el estudiante todavía no evacua, pero ya puede ver a
+            // dónde iría: la ruta es lo primero y «estoy listo» lo confirma.
+            _AlertButton(
+              key: const Key('ver-mi-ruta'),
+              label: _routeLabel(alert),
+              icon: Icons.map_outlined,
+              background: Colors.white,
+              foreground: palette.accent,
+              onPressed: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (BuildContext context) =>
+                      GuidedRouteScreen(student: who, onResponded: onResponded),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _AlertButton(
+              key: const Key('alerta-entendido'),
+              label: style.primaryAction,
+              icon: Icons.check,
+              background: Colors.transparent,
+              foreground: AppColors.onBrand,
+              border: Colors.white70,
+              onPressed: onAcknowledge,
+            ),
           ] else if (secondary == null)
             _AlertButton(
               key: const Key('alerta-entendido'),
@@ -480,6 +507,13 @@ class _Actions extends StatelessWidget {
       ),
     );
   }
+}
+
+/// El texto del botón de la ruta. En una inundación no se sale del colegio sino
+/// que se sube, y decirlo así evita que alguien baje por la escalera equivocada.
+String _routeLabel(Alert alert) {
+  if (alert.hazard == Hazard.inundacion) return 'Ver ruta a zona alta';
+  return alert.level.requiresResponse ? 'Ver mi ruta de evacuación' : 'Ver mi ruta';
 }
 
 class _AlertButton extends StatelessWidget {

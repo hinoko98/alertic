@@ -62,4 +62,37 @@ void main() {
       expect(find.text('Aléjate de ventanas y estantes.'), findsOneWidget);
     });
   });
+
+  group('15 · inundación · azul', () {
+    testWidgets('el fondo es azul y el nivel naranja conserva su propio color', (
+      WidgetTester tester,
+    ) async {
+      await pumpAlert(
+        tester,
+        alertOf(
+          hazard: Hazard.inundacion,
+          level: AlertLevel.naranja,
+          title: 'INUNDACIÓN',
+          scope: 'Bloque 3 y patio central',
+        ),
+      );
+
+      expect(backgroundOf(tester), const Color(0xFF1D5FA8));
+      expect(find.text('Alerta naranja · Prepararse para salir'), findsOneWidget);
+      final Container chip = tester.widget<Container>(find.byKey(const Key('nivel-alerta')));
+      expect((chip.decoration! as BoxDecoration).color, const Color(0xFFF28C28));
+    });
+
+    testWidgets('en roja el nivel se ve rojo aunque el fondo sea azul', (
+      WidgetTester tester,
+    ) async {
+      await pumpAlert(
+        tester,
+        alertOf(hazard: Hazard.inundacion, level: AlertLevel.roja, title: 'INUNDACIÓN'),
+      );
+
+      final Container chip = tester.widget<Container>(find.byKey(const Key('nivel-alerta')));
+      expect((chip.decoration! as BoxDecoration).color, const Color(0xFFB2243B));
+    });
+  });
 }
