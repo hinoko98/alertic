@@ -1,4 +1,7 @@
+import 'package:alertic/features/onboarding/domain/enrollment.dart';
+import 'package:alertic/features/onboarding/domain/guardian_link.dart';
 import 'package:alertic/features/onboarding/presentation/screens/guardian_search_screen.dart';
+import 'package:alertic/features/session/domain/session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -199,6 +202,86 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(enrollment.requestsSent, 1);
+    });
+  });
+
+  /// Recorre los pasos 1 a 3 hasta dejar la solicitud enviada, con la respuesta
+  /// que el colegio dará a [outcome].
+  Future<void> reachLinked(WidgetTester tester, ClaimOutcome outcome) async {
+    enrollment = FakeEnrollmentRepository(latency: Duration.zero)..nextOutcome = outcome;
+    await tester.pumpWidget(testApp(enrollmentRepository: enrollment));
+    await tester.tap(find.text('Saltar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Acudiente'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('acudiente-colegio')), 'IICB');
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('acudiente-documento')), '1095812334');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Buscar estudiante'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sí, continuar'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('acudiente-nombre')), 'Sandra Rojas Gómez');
+    await tester.enterText(find.byKey(const Key('acudiente-numero')), '63 456 789');
+    await tester.enterText(find.byKey(const Key('acudiente-celular')), '300 555 12 34');
+    await tester.ensureVisible(find.text('Continuar'));
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+  }
+
+  final Session approved = Session(
+    token: 'demo-acudiente',
+    profile: const GuardianEnrollment(
+      fullName: 'Sandra Rojas Gómez',
+      maskedPhone: '300 ••• 1234',
+      children: <LinkedStudent>[
+        LinkedStudent(fullName: 'Valentina Rojas Gómez', grade: '9.° B', shift: 'Mañana'),
+      ],
+    ),
+    expiresAt: DateTime(2100),
+  );
+
+  group('13 · vinculación', () {
+    testWidgets('mientras el colegio no apruebe, espera y no entrega la sesión', (
+      WidgetTester tester,
+    ) async {
+      await reachLinked(tester, const ClaimPending());
+
+      expect(find.text('Esperando al colegio'), findsOneWidget);
+      expect(find.text('Paso 4 de 4'), findsOneWidget);
+      expect(find.text('Entrar'), findsNothing);
+
+      await tester.tap(find.text('Revisar estado'));
+      await tester.pumpAndSettle();
+      expect(find.text('Esperando al colegio'), findsOneWidget);
+    });
+
+    testWidgets('si el colegio aprueba, el acudiente entra con su sesión', (
+      WidgetTester tester,
+    ) async {
+      await reachLinked(tester, ClaimApproved(approved));
+
+      expect(find.text('Quedaste vinculado con Valentina'), findsOneWidget);
+      expect(find.text('Valentina Rojas Gómez'), findsOneWidget);
+      expect(find.text('Vinculado'), findsOneWidget);
+
+      await tester.tap(find.text('Entrar'));
+      await tester.pumpAndSettle();
+      expect(find.text('Para avisarte a tiempo necesitamos dos permisos'), findsOneWidget);
+    });
+
+    testWidgets('si el colegio rechaza, lo dice y deja volver a empezar', (
+      WidgetTester tester,
+    ) async {
+      await reachLinked(tester, const ClaimRejected());
+
+      expect(find.text('El colegio no pudo confirmar tus datos'), findsOneWidget);
+      await tester.tap(find.text('Volver a empezar'));
+      await tester.pumpAndSettle();
+      expect(find.text('¿Quién eres en el colegio?'), findsOneWidget);
     });
   });
 }
