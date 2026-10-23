@@ -8,6 +8,8 @@ import '../../../onboarding/domain/enrollment.dart';
 import '../../../session/domain/session.dart';
 import '../../domain/alert.dart';
 import '../../domain/safety_report.dart';
+import '../../domain/alert_level.dart';
+import '../screens/alert_ended_screen.dart';
 import '../screens/alert_screen.dart';
 
 /// Deja pasar la alerta por encima de la app.
@@ -38,6 +40,14 @@ class _AlertGateState extends State<AlertGate> {
 
   Alert? _active;
 
+  /// La alerta que acaba de terminar y que esta persona llegó a ver. Mientras
+  /// haya una, en vez de volver al inicio se le dice que es seguro regresar.
+  Alert? _ended;
+  DateTime? _endedAt;
+
+  /// Cuándo dijo la persona que estaba a salvo, para mostrarle su tiempo.
+  DateTime? _answeredAt;
+
   /// La meta de los simulacros, que dice el servidor. Se pide una vez, cuando
   /// llega el primer simulacro.
   Duration? _drillGoal;
@@ -54,10 +64,20 @@ class _AlertGateState extends State<AlertGate> {
     _subscription ??=
         AppScope.of(context).alertRepository.watchActiveAlert().listen(
       (Alert? alert) {
-        if (mounted) {
-          setState(() => _active = alert);
-          if (alert != null && alert.isDrill) _loadDrillGoal();
-        }
+        if (!mounted) return;
+        setState(() {
+          final Alert? previous = _active;
+          if (alert == null && previous != null && _worthAnEnding(previous)) {
+            _ended = previous;
+            _endedAt = DateTime.now();
+          } else if (alert != null) {
+            // Otra alerta empieza: la despedida de la anterior ya no importa.
+            _ended = null;
+            _answeredAt = null;
+          }
+          _active = alert;
+        });
+        if (alert != null && alert.isDrill) _loadDrillGoal();
       },
       onError: (Object error, StackTrace stack) {
         // Si el flujo de alertas falla, la app sigue funcionando: es preferible
@@ -72,6 +92,14 @@ class _AlertGateState extends State<AlertGate> {
     _subscription?.cancel();
     super.dispose();
   }
+
+  /// Solo las alertas que pidieron salir (naranja y roja) o un simulacro tienen
+  /// «es seguro regresar»; una amarilla simplemente se apaga.
+  bool _worthAnEnding(Alert alert) =>
+      widget.session.role.mustRespondOnScreen &&
+      (alert.isDrill || alert.level != AlertLevel.amarilla);
+
+  void _markAnswered() => _answeredAt ??= DateTime.now();
 
   Future<void> _loadDrillGoal() async {
     if (_askedGoal) return;
@@ -90,6 +118,7 @@ class _AlertGateState extends State<AlertGate> {
   }
 
   Future<void> _acknowledge(Alert alert) async {
+    _markAnswered();
     setState(() => _handledId = alert.id);
     try {
       await AppScope.of(context).alertRepository.acknowledge(alert.id);
@@ -103,6 +132,20 @@ class _AlertGateState extends State<AlertGate> {
   @override
   Widget build(BuildContext context) {
     final Alert? alert = _active;
+
+    final Alert? ended = _ended;
+    if (alert == null && ended != null) {
+      return AlertEndedScreen(
+        alert: ended,
+        endedAt: _endedAt ?? DateTime.now(),
+        answeredAt: _answeredAt,
+        onClose: () => setState(() {
+          _ended = null;
+          _answeredAt = null;
+        }),
+      );
+    }
+
     if (alert == null || alert.id == _handledId) {
       return widget.child;
     }
@@ -136,7 +179,10 @@ class _AlertGateState extends State<AlertGate> {
       alert: alert,
       drillGoal: _drillGoal ?? const Duration(minutes: 5),
       student: profile is StudentEnrollment ? profile : null,
-      onResponded: () => setState(() => _handledId = alert.id),
+      onResponded: () {
+        _markAnswered();
+        setState(() => _handledId = alert.id);
+      },
       onAcknowledge: () => _acknowledge(alert),
       onRespond: (SafetyStatus _) => _acknowledge(alert),
     );
