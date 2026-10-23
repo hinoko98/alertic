@@ -21,12 +21,12 @@ class WhoAreYouScreen extends StatefulWidget {
   State<WhoAreYouScreen> createState() => _WhoAreYouScreenState();
 }
 
-enum _Choice { student, guardian, teacher, staff }
+enum _Choice { student, guardian, staff }
 
 class _WhoAreYouScreenState extends State<WhoAreYouScreen> {
   _Choice _choice = _Choice.student;
 
-  bool get _usesCode => _choice == _Choice.student || _choice == _Choice.guardian;
+  bool get _usesCode => _choice != _Choice.staff;
 
   void _next() {
     Navigator.of(context).pushNamed(
@@ -65,16 +65,10 @@ class _WhoAreYouScreenState extends State<WhoAreYouScreen> {
             onTap: () => setState(() => _choice = _Choice.guardian),
           ),
           _Option(
-            icon: Icons.co_present_outlined,
-            title: 'Docente o directivo',
-            subtitle: 'Guía a tu grupo y confirma quién llegó al punto',
-            selected: _choice == _Choice.teacher,
-            onTap: () => setState(() => _choice = _Choice.teacher),
-          ),
-          _Option(
             icon: Icons.assignment_ind_outlined,
-            title: 'Personal administrativo',
-            subtitle: 'Secretaría, servicios generales y vigilancia',
+            title: 'Personal del colegio',
+            subtitle: 'Docentes, directivos y administrativos: guía a tu grupo '
+                'y confirma quién llegó al punto',
             selected: _choice == _Choice.staff,
             onTap: () => setState(() => _choice = _Choice.staff),
           ),
