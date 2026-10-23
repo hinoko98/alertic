@@ -393,7 +393,7 @@ class _GuidedRouteScreenState extends State<GuidedRouteScreen> {
                       Expanded(
                         child: SecondaryButton(
                           key: const Key('ruta-bloqueada'),
-                          label: 'Ruta bloqueada',
+                          label: 'La ruta está bloqueada',
                           onPressed: _reportingBlock ? null : _blocked,
                         ),
                       ),
