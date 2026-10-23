@@ -5,6 +5,7 @@ import 'package:alertic/features/account/presentation/account_screen.dart';
 import 'package:alertic/features/account/domain/alert_preferences.dart';
 import 'package:alertic/features/account/domain/evacuation_support.dart';
 import 'package:alertic/features/alerts/domain/alert_level.dart';
+import 'package:alertic/features/risks/domain/risk_repository.dart';
 import 'package:alertic/features/alerts/domain/evacuation_rating.dart';
 import 'package:alertic/features/alerts/domain/hazard.dart';
 import 'package:alertic/features/alerts/domain/safety_report.dart';
@@ -521,12 +522,65 @@ void main() {
       expect(find.text('Bloque A, 2.° piso'), findsOneWidget);
       expect(find.text('En revisión'), findsOneWidget);
 
-      // «Ver mis reportes» deja a la persona en Reportar, con su reporte en la lista.
+      // «Ver mis reportes» abre la lista con sus contadores.
       await tester.tap(find.byKey(const Key('ver-mis-reportes')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('reporte-enviado')), findsNothing);
-      expect(find.text('MIS REPORTES'), findsOneWidget);
-      expect(find.text('Nuevo'), findsOneWidget);
+      expect(find.text('Lo que has avisado al colegio'), findsOneWidget);
+      expect(find.text('Grieta o daño · Bloque A, 2.° piso'), findsOneWidget);
+      expect(find.text('Enviado'), findsWidgets);
+    });
+
+    testWidgets('«Mis reportes» cuenta enviados, en revisión y resueltos', (
+      WidgetTester tester,
+    ) async {
+      RiskReport report(String id, RiskStatus status) => RiskReport(
+            id: id,
+            number: 100,
+            kind: RiskKind.cable,
+            place: 'Patio central',
+            status: status,
+            createdAt: DateTime.now(),
+          );
+      risks.reports.addAll(<RiskReport>[
+        report('a', RiskStatus.nuevo),
+        report('b', RiskStatus.enRevision),
+        report('c', RiskStatus.atendido),
+        report('d', RiskStatus.atendido),
+      ]);
+      await signIn(tester, 'IICB7K4P');
+
+      await tester.tap(find.text('Reportar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('abrir-mis-reportes')));
+      await tester.pumpAndSettle();
+
+      Text countOf(String key) => tester.widget<Text>(
+            find.descendant(of: find.byKey(Key(key)), matching: find.byType(Text)).first,
+          );
+      expect(countOf('cuenta-enviados').data, '4');
+      expect(countOf('cuenta-revision').data, '1');
+      expect(countOf('cuenta-resueltos').data, '2');
+      expect(find.text('Tus reportes ayudaron a corregir 2 riesgos este año.'), findsOneWidget);
+
+      // «Nuevo reporte» vuelve al formulario.
+      await tester.tap(find.byKey(const Key('nuevo-reporte')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('enviar-reporte')), findsOneWidget);
+    });
+
+    testWidgets('«Mis reportes» sin reportes lo dice y no presume de nada', (
+      WidgetTester tester,
+    ) async {
+      await signIn(tester, 'IICB7K4P');
+
+      await tester.tap(find.text('Reportar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('abrir-mis-reportes')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('sin-reportes')), findsOneWidget);
+      expect(find.byKey(const Key('riesgos-corregidos')), findsNothing);
     });
 
     testWidgets('si el reporte no llega, no dice «enviado»', (WidgetTester tester) async {
