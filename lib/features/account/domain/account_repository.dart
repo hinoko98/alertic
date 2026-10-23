@@ -1,4 +1,5 @@
 import '../../onboarding/domain/school.dart';
+import 'evacuation_support.dart';
 
 /// Los ajustes de una persona.
 class AccountSettings {
@@ -122,4 +123,13 @@ abstract interface class AccountRepository {
   Future<List<FamilyContact>> removeContact(String id);
 
   Future<List<FeedItem>> loadFeed();
+
+  /// El apoyo para evacuar de la persona y quién va por ella.
+  Future<SupportOverview> loadSupport();
+
+  /// Pide (o cambia) el apoyo.
+  Future<SupportOverview> saveSupport(SupportSettings settings);
+
+  /// Deja de pedir apoyo. Los compañeros asignados se conservan.
+  Future<SupportOverview> clearSupport();
 }
