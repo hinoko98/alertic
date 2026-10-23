@@ -7,6 +7,9 @@ import '../../../../core/errors/error_reporter.dart';
 import '../../../onboarding/domain/enrollment.dart';
 import '../../../session/domain/session.dart';
 import '../../../account/domain/alert_preferences.dart';
+import '../../../../core/session/user_role.dart';
+import '../../../account/domain/account_repository.dart';
+import '../../../account/domain/evacuation_support.dart';
 import '../../domain/alert.dart';
 import '../../domain/safety_report.dart';
 import '../../domain/alert_level.dart';
@@ -62,9 +65,15 @@ class _AlertGateState extends State<AlertGate> {
   /// tiene que verse.
   String? _handledId;
 
+  bool _preferencesStarted = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_preferencesStarted) {
+      _preferencesStarted = true;
+      _loadPreferences();
+    }
     _subscription ??=
         AppScope.of(context).alertRepository.watchActiveAlert().listen(
       (Alert? alert) {
@@ -91,16 +100,19 @@ class _AlertGateState extends State<AlertGate> {
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _loadPreferences();
-  }
-
   Future<void> _loadPreferences() async {
+    final AccountRepository? accounts = AppScope.of(context).accountRepository;
     try {
       final AlertPreferences loaded = await AlertPreferencesStore.load();
       if (mounted) setState(() => _preferences = loaded);
+      // Quien pidió apoyo para evacuar con vibración recibe la alerta vibrando
+      // aunque no haya tocado «Vibración fuerte» en sus preferencias.
+      if (widget.session.role == UserRole.estudiante) {
+        final SupportOverview? support = await accounts?.loadSupport();
+        if (mounted && (support?.settings?.vibrate ?? false)) {
+          setState(() => _preferences = _preferences.copyWith(strongVibration: true));
+        }
+      }
     } catch (error, stack) {
       // Sin las preferencias la alerta sale con los valores de siempre.
       ErrorReporter.report(error, stack, context: 'preferencias de alerta');

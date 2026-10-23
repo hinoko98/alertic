@@ -1,4 +1,5 @@
 import 'package:alertic/features/account/domain/account_repository.dart';
+import 'package:alertic/features/account/domain/evacuation_support.dart';
 import 'package:alertic/features/onboarding/domain/school.dart';
 
 /// Ajustes, contactos e historial en memoria, solo para pruebas.
@@ -26,6 +27,32 @@ class FakeAccountRepository implements AccountRepository {
   ];
 
   List<FeedItem> feed = <FeedItem>[];
+
+  /// El apoyo que pidió la persona y los compañeros que le asignó el colegio.
+  SupportSettings? support;
+  List<SupportBuddy> buddies = const <SupportBuddy>[
+    SupportBuddy(fullName: 'Mateo Pinzón', detail: 'Compañero · 9.° B'),
+  ];
+
+  @override
+  Future<SupportOverview> loadSupport() async {
+    await _wait();
+    return SupportOverview(settings: support, buddies: buddies);
+  }
+
+  @override
+  Future<SupportOverview> saveSupport(SupportSettings settings) async {
+    await _wait();
+    support = settings;
+    return SupportOverview(settings: support, buddies: buddies);
+  }
+
+  @override
+  Future<SupportOverview> clearSupport() async {
+    await _wait();
+    support = null;
+    return SupportOverview(buddies: buddies);
+  }
 
   bool failNext = false;
   int _next = 1;

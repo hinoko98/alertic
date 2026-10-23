@@ -3,6 +3,7 @@ import 'package:alertic/core/session/user_role.dart';
 import 'package:alertic/features/account/domain/account_repository.dart';
 import 'package:alertic/features/account/presentation/account_screen.dart';
 import 'package:alertic/features/account/domain/alert_preferences.dart';
+import 'package:alertic/features/account/domain/evacuation_support.dart';
 import 'package:alertic/features/alerts/domain/alert_level.dart';
 import 'package:alertic/features/alerts/domain/evacuation_rating.dart';
 import 'package:alertic/features/alerts/domain/hazard.dart';
@@ -616,6 +617,53 @@ void main() {
       expect(saved.textSize, AlertTextSize.large);
       // Guardar vuelve al perfil.
       expect(find.byKey(const Key('guardar-avisos')), findsNothing);
+    });
+
+    testWidgets('«Apoyo para evacuar» muestra los compañeros y guarda lo que se pide', (
+      WidgetTester tester,
+    ) async {
+      await signIn(tester, 'IICB7K4P');
+      await tester.tap(find.text('Perfil'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('apoyo-para-evacuar')));
+      await tester.tap(find.byKey(const Key('apoyo-para-evacuar')));
+      await tester.pumpAndSettle();
+
+      // Sin pedir nada todavía: se ven los compañeros que asignó el colegio.
+      expect(find.text('Mateo Pinzón'), findsOneWidget);
+      expect(account.support, isNull);
+
+      await tester.tap(find.byKey(const Key('apoyo-movilidad')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('apoyo-voz')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('guardar-apoyo')));
+      await tester.pumpAndSettle();
+
+      expect(account.support?.need, SupportNeed.mobility);
+      expect(account.support?.readAloud, isTrue);
+      expect(account.support?.vibrate, isTrue);
+    });
+
+    testWidgets('«Ya no necesito apoyo» lo quita y deja a los compañeros', (
+      WidgetTester tester,
+    ) async {
+      await signIn(tester, 'IICB7K4P');
+      account.support = const SupportSettings(need: SupportNeed.temporary);
+      await tester.tap(find.text('Perfil'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('apoyo-para-evacuar')));
+      await tester.tap(find.byKey(const Key('apoyo-para-evacuar')));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.byKey(const Key('quitar-apoyo')), 200);
+      await tester.tap(find.byKey(const Key('quitar-apoyo')));
+      await tester.pumpAndSettle();
+
+      expect(account.support, isNull);
+      expect(find.text('Mateo Pinzón'), findsOneWidget);
+      expect(find.byKey(const Key('quitar-apoyo')), findsNothing);
     });
 
     testWidgets('los contactos de familia: se suma uno, se quita, y el del colegio no', (

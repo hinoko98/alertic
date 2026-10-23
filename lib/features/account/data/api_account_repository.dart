@@ -1,6 +1,7 @@
 import '../../../core/network/api_client.dart';
 import '../../onboarding/domain/school.dart';
 import '../domain/account_repository.dart';
+import '../domain/evacuation_support.dart';
 
 /// Ajustes, contactos e historial de avisos contra la API.
 class ApiAccountRepository implements AccountRepository {
@@ -36,6 +37,52 @@ class ApiAccountRepository implements AccountRepository {
       if (clearMedicalInfo) 'medicalInfo': null else 'medicalInfo': ?medicalInfo,
     };
     return _settings((await _api.patch('/me/settings', body: body))['settings']);
+  }
+
+  @override
+  Future<SupportOverview> loadSupport() async => _support(await _api.get('/me/support'));
+
+  @override
+  Future<SupportOverview> saveSupport(SupportSettings settings) async => _support(
+        await _api.put(
+          '/me/support',
+          body: <String, dynamic>{
+            'need': settings.need.wire,
+            'vibrate': settings.vibrate,
+            'flash': settings.flash,
+            'readAloud': settings.readAloud,
+          },
+        ),
+      );
+
+  @override
+  Future<SupportOverview> clearSupport() async => _support(await _api.delete('/me/support'));
+
+  static SupportOverview _support(Map<String, dynamic> raw) {
+    final Object? rawSupport = raw['support'];
+    final Map<String, dynamic>? support = rawSupport is Map<String, dynamic> ? rawSupport : null;
+    final SupportNeed? need = SupportNeed.tryParse(support?['need'] as String?);
+    final Object? buddies = raw['buddies'];
+
+    return SupportOverview(
+      settings: need == null
+          ? null
+          : SupportSettings(
+              need: need,
+              vibrate: support!['vibrate'] as bool? ?? true,
+              flash: support['flash'] as bool? ?? false,
+              readAloud: support['readAloud'] as bool? ?? false,
+            ),
+      buddies: <SupportBuddy>[
+        if (buddies is List)
+          for (final Object? item in buddies)
+            if (item is Map<String, dynamic>)
+              SupportBuddy(
+                fullName: item['fullName'] as String? ?? '',
+                detail: item['detail'] as String? ?? '',
+              ),
+      ],
+    );
   }
 
   @override
