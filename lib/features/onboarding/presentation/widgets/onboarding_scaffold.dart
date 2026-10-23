@@ -16,6 +16,7 @@ class OnboardingScaffold extends StatelessWidget {
     required this.child,
     required this.footer,
     this.step,
+    this.stepCount = 3,
     this.subtitle,
     this.showBack = true,
     super.key,
@@ -26,6 +27,10 @@ class OnboardingScaffold extends StatelessWidget {
 
   /// En qué paso va, empezando en 0. Sin valor, no se muestran las barritas.
   final int? step;
+
+  /// Cuántos pasos tiene el registro: tres para estudiante y docente, cuatro
+  /// para el acudiente.
+  final int stepCount;
   final bool showBack;
   final Widget child;
   final Widget footer;
@@ -40,11 +45,11 @@ class OnboardingScaffold extends StatelessWidget {
         children: <Widget>[
           AppScreenHeader(
             title: title,
-            subtitle: subtitle ?? (step == null ? null : 'Paso ${step! + 1} de 3'),
+            subtitle: subtitle ?? (step == null ? null : 'Paso ${step! + 1} de $stepCount'),
             onBack: showBack ? () => Navigator.of(context).maybePop() : null,
             showHelp: false,
           ),
-          if (step != null) _Progress(step: step!),
+          if (step != null) _Progress(step: step!, count: stepCount),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(
@@ -84,9 +89,10 @@ class OnboardingScaffold extends StatelessWidget {
 }
 
 class _Progress extends StatelessWidget {
-  const _Progress({required this.step});
+  const _Progress({required this.step, required this.count});
 
   final int step;
+  final int count;
 
   @override
   Widget build(BuildContext context) {
@@ -98,10 +104,10 @@ class _Progress extends StatelessWidget {
         0,
       ),
       child: Semantics(
-        label: 'Paso ${step + 1} de 3',
+        label: 'Paso ${step + 1} de $count',
         child: Row(
           children: <Widget>[
-            for (int i = 0; i < 3; i++) ...<Widget>[
+            for (int i = 0; i < count; i++) ...<Widget>[
               if (i > 0) const SizedBox(width: 6),
               Expanded(
                 child: Container(
