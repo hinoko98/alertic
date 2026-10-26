@@ -16,11 +16,11 @@ import '../../../onboarding/domain/person_name.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../domain/teacher_repository.dart';
 
-/// Pantalla 15: la lista del grupo durante la emergencia.
+/// Pantalla 47: la lista del grupo en el punto de encuentro.
 ///
 /// Responde una sola pregunta: quién falta. Por eso lo primero es el contador y
-/// lo segundo son los que no han respondido, no la lista completa en orden
-/// alfabético.
+/// lo segundo son los que faltan, no la lista completa en orden alfabético; los
+/// que ya están a salvo quedan plegados debajo.
 class GroupRosterScreen extends StatefulWidget {
   const GroupRosterScreen({
     required this.alert,
@@ -38,6 +38,7 @@ class GroupRosterScreen extends StatefulWidget {
 class _GroupRosterScreenState extends State<GroupRosterScreen> {
   List<RosterEntry> _entries = <RosterEntry>[];
   bool _loading = true;
+  bool _showSafe = false;
   String? _error;
 
   StreamSubscription<LiveChange>? _live;
@@ -107,21 +108,24 @@ class _GroupRosterScreenState extends State<GroupRosterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<RosterEntry> needHelp = _entries
-        .where((RosterEntry e) => e.needsHelp)
-        .toList();
-    final List<RosterEntry> pending = _entries
-        .where((RosterEntry e) => !e.hasResponded)
-        .toList();
+    final List<RosterEntry> needHelp = _entries.where((RosterEntry e) => e.needsHelp).toList();
+    final List<RosterEntry> pending = _entries.where((RosterEntry e) => !e.hasResponded).toList();
     final List<RosterEntry> safe = _entries
         .where((RosterEntry e) => e.hasResponded && !e.needsHelp)
         .toList();
+    final List<RosterEntry> missing = <RosterEntry>[...needHelp, ...pending];
+    final int byTeacher = safe.where((RosterEntry e) => e.markedByTeacher).length;
+    final String? point = widget.alert.meetingPoint;
 
     return AppPage(
-      title: 'Lista del grupo',
-      subtitle: '${widget.alert.title} · ${widget.alert.issuedAtLabel}',
+      title: 'Lista · ${widget.grade}',
+      subtitle: <String>[
+        if (point != null && point.isNotEmpty) point,
+        '${widget.alert.title} ${widget.alert.issuedAtLabel}',
+      ].join(' · '),
       onBack: () => Navigator.of(context).maybePop(),
       showHelp: false,
+      actions: const <Widget>[_LiveChip()],
       bottom: SafeArea(
         top: false,
         child: Padding(
@@ -132,7 +136,7 @@ class _GroupRosterScreenState extends State<GroupRosterScreen> {
             AppSpacing.md,
           ),
           child: PrimaryButton(
-            label: 'ENVIAR REPORTE A COORDINACIÓN',
+            label: 'Enviar lista a Coordinación',
             background: AppColors.ink,
             onPressed: () {
               ScaffoldMessenger.of(context)
@@ -140,7 +144,7 @@ class _GroupRosterScreenState extends State<GroupRosterScreen> {
                 ..showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Reporte de ${widget.grade} enviado: '
+                      'Lista de ${widget.grade} enviada: '
                       '${safe.length} a salvo, ${needHelp.length} con ayuda, '
                       '${pending.length} sin respuesta.',
                     ),
@@ -150,154 +154,146 @@ class _GroupRosterScreenState extends State<GroupRosterScreen> {
           ),
         ),
       ),
-      body: Column(
-        children: <Widget>[
-          _Counter(
-            grade: widget.grade,
-            responded: safe.length + needHelp.length,
-            total: _entries.length,
-            safe: safe.length,
-            needHelp: needHelp.length,
-            pending: pending.length,
-          ),
-          Expanded(
-            child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.brand),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.brand))
+          : _error != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.screenGutter),
+                child: Text(_error!, style: AppTextStyles.body),
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenGutter,
+                AppSpacing.md,
+                AppSpacing.screenGutter,
+                AppSpacing.xl,
+              ),
+              children: <Widget>[
+                _Counter(safe: safe.length, total: _entries.length, byTeacher: byTeacher),
+                const SizedBox(height: AppSpacing.md),
+                if (missing.isEmpty)
+                  const AppCard(
+                    key: Key('nadie-falta'),
+                    child: Text('No falta nadie. Todo el grupo está a salvo.', style: AppTextStyles.body),
                   )
-                : _error != null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.screenGutter),
-                      child: Text(_error!, style: AppTextStyles.body),
-                    ),
-                  )
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.screenGutter,
-                      AppSpacing.md,
-                      AppSpacing.screenGutter,
-                      AppSpacing.xl,
-                    ),
-                    children: <Widget>[
-                      for (final RosterEntry entry in needHelp)
-                        _NeedsHelpCard(entry: entry),
-                      if (pending.isNotEmpty) ...<Widget>[
-                        const SizedBox(height: AppSpacing.md),
-                        const Text(
-                          'SIN RESPUESTA',
-                          style: AppTextStyles.eyebrow,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        for (final RosterEntry entry in pending)
-                          _PendingRow(
-                            entry: entry,
-                            onMarkSafe: () => _markSafe(entry),
+                else ...<Widget>[
+                  Text('FALTAN ${missing.length}', style: AppTextStyles.eyebrow),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppCard(
+                    key: const Key('faltan'),
+                    borderColor: AppColors.brandSoft,
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                    child: Column(
+                      children: <Widget>[
+                        for (int i = 0; i < missing.length; i++) ...<Widget>[
+                          if (i > 0) const Divider(height: 1, color: AppColors.border),
+                          _MissingRow(
+                            entry: missing[i],
+                            // Quien pidió ayuda no se marca a salvo desde aquí: el
+                            // servidor lo rechaza y la brigada debe atenderlo.
+                            onHere: missing[i].needsHelp ? null : () => _markSafe(missing[i]),
                           ),
+                        ],
                       ],
-                      if (safe.isNotEmpty) ...<Widget>[
-                        const SizedBox(height: AppSpacing.lg),
-                        Text(
-                          'A SALVO · ${safe.length}',
-                          style: AppTextStyles.eyebrow,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        for (final RosterEntry entry in safe)
-                          _SafeRow(entry: entry),
-                      ],
-                    ],
+                    ),
                   ),
-          ),
-        ],
+                ],
+                if (safe.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: AppSpacing.md),
+                  _SafeToggle(
+                    count: safe.length,
+                    expanded: _showSafe,
+                    onTap: () => setState(() => _showSafe = !_showSafe),
+                  ),
+                  if (_showSafe) ...<Widget>[
+                    const SizedBox(height: AppSpacing.sm),
+                    AppCard(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Column(
+                        children: <Widget>[
+                          for (final RosterEntry entry in safe) _SafeRow(entry: entry),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ],
+            ),
+    );
+  }
+}
+
+/// «En curso»: la lista se actualiza sola mientras dura la alerta.
+class _LiveChip extends StatelessWidget {
+  const _LiveChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.brandSoft,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: const Text(
+        '● En curso',
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.brand),
       ),
     );
   }
 }
 
-/// Lo primero que se ve: cuántos faltan.
+/// Lo primero que se ve: cuántos están a salvo y quién los marcó.
 class _Counter extends StatelessWidget {
-  const _Counter({
-    required this.grade,
-    required this.responded,
-    required this.total,
-    required this.safe,
-    required this.needHelp,
-    required this.pending,
-  });
+  const _Counter({required this.safe, required this.total, required this.byTeacher});
 
-  final String grade;
-  final int responded;
-  final int total;
   final int safe;
-  final int needHelp;
-  final int pending;
+  final int total;
+  final int byTeacher;
 
   @override
   Widget build(BuildContext context) {
-    final double progress = total == 0 ? 0 : responded / total;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.screenGutter,
-        AppSpacing.md,
-        AppSpacing.screenGutter,
-        0,
-      ),
+    return AppCard(
+      key: const Key('contador-lista'),
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              Expanded(child: Text(grade, style: AppTextStyles.screenTitle)),
+              const Text('A salvo', style: AppTextStyles.itemTitle),
               Text(
-                '$responded',
+                '$safe de $total',
                 style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
                   color: AppColors.ink,
-                ),
-              ),
-              Text(
-                '/$total',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.inkFaint,
                 ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: SizedBox(
-              height: 6,
-              child: LinearProgressIndicator(
-                value: progress,
-                backgroundColor: AppColors.border,
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.success,
+          Semantics(
+            label: '$safe de $total a salvo',
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: SizedBox(
+                height: 6,
+                child: LinearProgressIndicator(
+                  value: total == 0 ? 0 : safe / total,
+                  backgroundColor: AppColors.border,
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.success),
                 ),
               ),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: <Widget>[
-              Text('$safe a salvo', style: AppTextStyles.caption),
-              const SizedBox(width: AppSpacing.md),
-              Text(
-                '$needHelp ayuda',
-                style: AppTextStyles.caption.copyWith(
-                  color: needHelp > 0 ? AppColors.brand : AppColors.inkMuted,
-                  fontWeight: needHelp > 0 ? FontWeight.w800 : FontWeight.w400,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Text('$pending sin respuesta', style: AppTextStyles.caption),
-            ],
+          Text(
+            '${safe - byTeacher} confirmaron en su celular · $byTeacher los marcaste tú',
+            style: AppTextStyles.caption,
           ),
         ],
       ),
@@ -305,77 +301,103 @@ class _Counter extends StatelessWidget {
   }
 }
 
-class _NeedsHelpCard extends StatelessWidget {
-  const _NeedsHelpCard({required this.entry});
+/// Una persona que falta: quién es, por qué falta y qué se puede hacer.
+class _MissingRow extends StatelessWidget {
+  const _MissingRow({required this.entry, required this.onHere});
 
   final RosterEntry entry;
+  final VoidCallback? onHere;
 
   @override
   Widget build(BuildContext context) {
+    final String detail = entry.needsHelp
+        ? 'Pidió ayuda${entry.location == null ? '' : ' · ${entry.location!.label}'}'
+        : 'Sin respuesta en su celular';
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: AppCard(
-        color: AppColors.brandSoft,
-        borderColor: AppColors.brand,
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Row(
-          children: <Widget>[
-            const Icon(Icons.error_outline, color: AppColors.brand, size: 20),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    PersonName.short(entry.fullName),
-                    style: AppTextStyles.itemTitle,
-                  ),
-                  Text('Necesita ayuda', style: AppTextStyles.caption),
-                ],
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Row(
+        children: <Widget>[
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: entry.needsHelp ? AppColors.brandSoft : AppColors.surfaceAlt,
+            child: Text(
+              PersonName.initials(entry.fullName),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: entry.needsHelp ? AppColors.brand : AppColors.ink,
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(PersonName.short(entry.fullName), style: AppTextStyles.itemTitle),
+                Text(detail, style: AppTextStyles.caption),
+              ],
+            ),
+          ),
+          if (onHere != null)
+            // Para quien no tiene celular: el docente lo ve en el punto de
+            // encuentro y lo marca a mano.
+            OutlinedButton(
+              key: Key('esta-aqui-${entry.personId}'),
+              onPressed: onHere,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.ink,
+                minimumSize: const Size(0, 44),
+                side: const BorderSide(color: AppColors.border),
+                shape: const StadiumBorder(),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              ),
+              child: const Text('Está aquí', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+            )
+          else
+            const Text(
+              'Pidió ayuda',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.brand),
+            ),
+        ],
       ),
     );
   }
 }
 
-class _PendingRow extends StatelessWidget {
-  const _PendingRow({required this.entry, required this.onMarkSafe});
+/// «28 a salvo · Ver la lista completa»: pliega a los que ya no preocupan.
+class _SafeToggle extends StatelessWidget {
+  const _SafeToggle({required this.count, required this.expanded, required this.onTap});
 
-  final RosterEntry entry;
-  final VoidCallback onMarkSafe;
+  final int count;
+  final bool expanded;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+    return AppCard(
+      key: const Key('ver-a-salvo'),
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         children: <Widget>[
+          const CircleAvatar(
+            radius: 18,
+            backgroundColor: AppColors.successSoft,
+            child: Icon(Icons.check, size: 18, color: AppColors.success),
+          ),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
-            child: Text(
-              PersonName.short(entry.fullName),
-              style: AppTextStyles.itemTitle,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('$count a salvo', style: AppTextStyles.itemTitle),
+                Text(expanded ? 'Ocultar la lista' : 'Ver la lista completa', style: AppTextStyles.caption),
+              ],
             ),
           ),
-          // Para quien no tiene celular: el docente lo ve en el punto de
-          // encuentro y lo marca a mano.
-          OutlinedButton(
-            onPressed: onMarkSafe,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.ink,
-              side: const BorderSide(color: AppColors.border),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            ),
-            child: const Text(
-              'MARCAR A SALVO',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
-            ),
-          ),
+          Icon(expanded ? Icons.expand_less : Icons.chevron_right, color: AppColors.inkMuted),
         ],
       ),
     );
@@ -389,27 +411,19 @@ class _SafeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final DateTime? at = entry.reportedAt;
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         children: <Widget>[
-          const Icon(
-            Icons.check_circle_outline,
-            size: 16,
-            color: AppColors.success,
-          ),
+          const Icon(Icons.check_circle_outline, size: 16, color: AppColors.success),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              PersonName.short(entry.fullName),
-              style: AppTextStyles.body,
-            ),
-          ),
+          Expanded(child: Text(PersonName.short(entry.fullName), style: AppTextStyles.body)),
           Text(
-            entry.location == null
-                ? ''
-                : '${entry.reportedAt?.hour ?? 0}:'
-                      '${(entry.reportedAt?.minute ?? 0).toString().padLeft(2, '0')}',
+            <String>[
+              if (entry.markedByTeacher) 'Lo marcaste tú',
+              if (at != null) '${at.hour}:${at.minute.toString().padLeft(2, '0')}',
+            ].join(' · '),
             style: AppTextStyles.caption.copyWith(fontSize: 11),
           ),
         ],
