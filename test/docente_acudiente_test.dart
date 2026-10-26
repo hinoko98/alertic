@@ -354,6 +354,40 @@ void main() {
     });
   });
 
+  group('48 · mi grupo del docente', () {
+    testWidgets('muestra cobertura, apoyo para evacuar y pendientes', (
+      WidgetTester tester,
+    ) async {
+      await signInWithPassword(tester, 'carlos.jaimes@iic.edu.co', 'Contabilidad2026');
+
+      await tester.tap(find.text('Mi grupo'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mi grupo · 10° B'), findsOneWidget);
+      expect(find.text('30 de 32'), findsOneWidget);
+      expect(find.text('29 de 32'), findsOneWidget);
+      expect(find.text('Movilidad reducida · lo acompañan Mateo y Sara'), findsOneWidget);
+      expect(find.text('Sin app'), findsOneWidget);
+      expect(find.text('Sin acudiente'), findsOneWidget);
+    });
+
+    testWidgets('el docente sigue pudiendo reportar un riesgo desde su grupo', (
+      WidgetTester tester,
+    ) async {
+      await signInWithPassword(tester, 'carlos.jaimes@iic.edu.co', 'Contabilidad2026');
+
+      await tester.tap(find.text('Mi grupo'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.byKey(const Key('grupo-reportar-riesgo')), 200);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('grupo-reportar-riesgo')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Reportar un riesgo'), findsWidgets);
+      expect(find.text('Llega al comité de gestión del riesgo'), findsOneWidget);
+    });
+  });
+
   group('bloque E · acudiente', () {
     testWidgets('en calma muestra a los hijos sin alarmar', (
       WidgetTester tester,
