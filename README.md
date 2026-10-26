@@ -50,6 +50,12 @@ base de datos, aunque esté vacía. Sin `--dart-define=ALERTIC_API=...` la app u
 Windows; un celular real necesita su dirección (ver *Probar en tu celular*). En
 VS Code, `.vscode/launch.json` trae las configuraciones con la dirección puesta.
 
+La base de datos es la del servidor (**PostgreSQL**). En el celular (Android, iOS)
+la app guarda en **SQLite** (`sqflite`) la última respuesta de lo que hay que
+poder leer sin red —protocolos, puntos de encuentro y alertas anteriores— y la
+usa solo cuando el servidor no responde (`lib/core/cache/`). La alerta activa
+nunca sale de la caché: siempre viene del servidor.
+
 La pantalla de bienvenida y la de inicio de sesión dicen si el servidor responde:
 
 | Línea | Qué significa |
@@ -592,7 +598,7 @@ flutter test --exclude-tags integracion           # sin necesitar el servidor
 
 Las pruebas de `test/integration/` hablan con la API de verdad. Si no está
 corriendo, **se saltan** en vez de fallar. Si un código de registro ya se quemó
-(son de un solo uso), también se saltan: vuelve a sembrar la base de pruebas con `DATABASE_FILE=./data/demo.db npm run seed:demo`.
+(son de un solo uso), también se saltan: vuelve a sembrar la base de pruebas con `DATABASE_DIR=./data/demo npm run seed:demo`.
 
 El servidor tiene las suyas, con una base de datos en memoria que no toca tus
 datos: `cd ../alerticapi && npm test` (172 pruebas).
