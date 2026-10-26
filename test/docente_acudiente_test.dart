@@ -127,7 +127,7 @@ void main() {
 
       await tester.tap(find.text('GENERAR ALERTA'));
       await tester.pumpAndSettle();
-      expect(find.text('NUEVA ALERTA'), findsOneWidget);
+      expect(find.text('Emitir alerta'), findsOneWidget);
 
       // Sin escoger amenaza y nivel, el botón está bloqueado.
       await tester.tap(find.text('SISMOS'));
@@ -138,7 +138,7 @@ void main() {
       // Un toque suelta el gesto antes de tiempo: no debe emitir nada.
       await tester.tap(find.byType(HoldToSendButton));
       await tester.pumpAndSettle();
-      expect(find.text('NUEVA ALERTA'), findsOneWidget);
+      expect(find.text('Emitir alerta'), findsOneWidget);
       expect(alerts.lastPublished, isNull);
     });
 
