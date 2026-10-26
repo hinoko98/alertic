@@ -17,6 +17,7 @@ import '../features/panel/presentation/screens/emergency_tab.dart';
 import '../features/panel/presentation/screens/more_tab.dart';
 import '../features/student/presentation/screens/student_home_screen.dart';
 import '../features/support/presentation/support_inbox_screen.dart';
+import '../features/teacher/presentation/screens/teacher_group_screen.dart';
 import '../features/teacher/presentation/screens/teacher_home_screen.dart';
 
 /// Una pestaña de la barra inferior.
@@ -115,7 +116,7 @@ final class StudentExperience implements RoleExperience {
 
 /// Bloque D: la app del docente.
 ///
-/// Tres pestañas, y la última es la cuenta. El docente usa esto con el edificio
+/// Cinco pestañas, y la última es la cuenta. El docente usa esto con el edificio
 /// moviéndose y 32 estudiantes mirándolo: cada pestaña de más es una decisión de
 /// más, y por eso salir y cambiar la contraseña viven fuera del camino de la
 /// emergencia.
@@ -139,14 +140,14 @@ final class TeacherExperience implements RoleExperience {
         builder: (BuildContext context) => TeacherHomeScreen(teacher: profile),
       ),
       AppDestination(
+        label: 'Mi grupo',
+        icon: Icons.groups_outlined,
+        builder: (BuildContext context) => TeacherGroupScreen(teacher: profile),
+      ),
+      AppDestination(
         label: 'Guías',
         icon: Icons.menu_book_outlined,
         builder: (BuildContext context) => const GuideScreen(),
-      ),
-      AppDestination(
-        label: 'Reportar',
-        icon: Icons.warning_amber_outlined,
-        builder: (BuildContext context) => const ReportRiskScreen(),
       ),
       AppDestination(
         label: 'Mensajes',
