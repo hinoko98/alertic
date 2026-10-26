@@ -256,6 +256,33 @@ void main() {
       expect(find.text('2 confirmaron en su celular · 1 los marcaste tú'), findsOneWidget);
     });
 
+    testWidgets('enviar la lista a coordinación usa los números del servidor', (
+      WidgetTester tester,
+    ) async {
+      await signInWithPassword(
+        tester,
+        'carlos.jaimes@iic.edu.co',
+        'Contabilidad2026',
+      );
+      alerts.simulate(AlertLevel.roja);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Estoy a salvo'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('LISTA DEL GRUPO'), 200);
+      await tester.ensureVisible(find.text('LISTA DEL GRUPO'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('LISTA DEL GRUPO'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Enviar lista a Coordinación'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Lista de 10° B enviada: 2 a salvo, 1 con ayuda, 3 sin respuesta.'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('los que están a salvo quedan plegados hasta pedirlos', (
       WidgetTester tester,
     ) async {
