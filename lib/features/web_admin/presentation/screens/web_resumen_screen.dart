@@ -133,7 +133,7 @@ class _WebResumenScreenState extends State<WebResumenScreen> {
         ),
       ],
       children: <Widget>[
-        _StatusBanner(active: _active, last: _last, failed: _failed.contains('alertas'), onReport: () => nav.go(WebPage.informes)),
+        _StatusBanner(active: _active, last: _last, failed: _failed.contains('alertas'), onReport: () => nav.go(WebPage.informes), onMonitor: () => nav.go(WebPage.monitoreo)),
         _Kpis(stats: _stats, reports: _reports, drills: _drills, failed: _failed),
         WebSplit(
           main: _DrillsPanel(overview: _drills, failed: _failed.contains('simulacros')),
@@ -151,12 +151,14 @@ class _StatusBanner extends StatelessWidget {
     required this.last,
     required this.failed,
     required this.onReport,
+    required this.onMonitor,
   });
 
   final Alert? active;
   final Alert? last;
   final bool failed;
   final VoidCallback onReport;
+  final VoidCallback onMonitor;
 
   @override
   Widget build(BuildContext context) {
@@ -185,6 +187,7 @@ class _StatusBanner extends StatelessWidget {
                 ],
               ),
             ),
+            WebButton(label: 'Ir al monitoreo', small: true, onPressed: onMonitor),
           ],
         ),
       );

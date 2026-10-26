@@ -215,6 +215,38 @@ class ApiPanelRepository implements PanelRepository {
   }
 
   @override
+  Future<List<GuardianRequest>> loadGuardianRequests() async {
+    final Map<String, dynamic> raw = await _api.get('/community/guardian-requests');
+    return _list(
+      raw['requests'],
+      (Map<String, dynamic> item) => GuardianRequest(
+        id: item['id'] as String? ?? '',
+        fullName: item['fullName'] as String? ?? '',
+        relationship: item['relationship'] as String? ?? '',
+        documentType: item['documentType'] as String?,
+        document: item['document'] as String?,
+        phone: item['phone'] as String?,
+        email: item['email'] as String?,
+        studentName: item['studentName'] as String? ?? '',
+        grade: item['grade'] as String?,
+        matchesRoster: item['matchesRoster'] == true,
+        createdAt:
+            DateTime.tryParse(item['createdAt'] as String? ?? '')?.toLocal() ?? DateTime.now(),
+      ),
+    );
+  }
+
+  @override
+  Future<void> approveGuardianRequest(String id) async {
+    await _act(() => _api.post('/community/guardian-requests/${_id(id)}/approve'));
+  }
+
+  @override
+  Future<void> rejectGuardianRequest(String id) async {
+    await _act(() => _api.post('/community/guardian-requests/${_id(id)}/reject'));
+  }
+
+  @override
   Future<void> closeSessions(String id) async {
     await _act(() => _api.post('/community/${_id(id)}/sign-out'));
   }

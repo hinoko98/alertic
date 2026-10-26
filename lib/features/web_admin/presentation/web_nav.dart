@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../session/domain/session.dart';
+
 import 'web_style.dart';
 
 /// Las pantallas del panel web, en el orden y con los grupos del menú del diseño.
@@ -42,16 +44,35 @@ enum WebSection {
 class WebNav extends InheritedWidget {
   const WebNav({
     required this.current,
+    required this.session,
     required this.go,
     required this.openMenu,
+    required this.open,
+    required this.back,
+    required this.hasDetail,
+    required this.refreshBadges,
     required this.badges,
     required super.child,
     super.key,
   });
 
   final WebPage current;
+
+  /// Quién tiene abierta la sesión del panel.
+  final Session session;
   final void Function(WebPage page) go;
   final VoidCallback openMenu;
+
+  /// Abre una pantalla de detalle encima de la página actual (el reporte, la
+  /// persona, la confirmación de una alerta). Ir a otra página del menú la cierra.
+  final void Function(Widget screen) open;
+
+  /// Cierra el detalle y vuelve a la página.
+  final VoidCallback back;
+  final bool hasDetail;
+
+  /// Vuelve a contar lo que muestran las insignias del menú.
+  final VoidCallback refreshBadges;
 
   /// Contadores del menú: reportes sin revisar, avisos por decidir.
   final ValueNotifier<Map<WebPage, int>> badges;
@@ -63,7 +84,8 @@ class WebNav extends InheritedWidget {
   }
 
   @override
-  bool updateShouldNotify(WebNav oldWidget) => oldWidget.current != current;
+  bool updateShouldNotify(WebNav oldWidget) =>
+      oldWidget.current != current || oldWidget.hasDetail != hasDetail;
 }
 
 /// El marco de cada pantalla: encabezado blanco con título y acciones, y debajo
@@ -155,6 +177,23 @@ class WebPageFrame extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// «Volver» para las pantallas de detalle.
+class WebBackButton extends StatelessWidget {
+  const WebBackButton({this.label = 'Volver', super.key});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return WebButton(
+      label: label,
+      secondary: true,
+      icon: Icons.arrow_back,
+      onPressed: WebNav.of(context).back,
     );
   }
 }

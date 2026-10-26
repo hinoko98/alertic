@@ -6,8 +6,19 @@ import '../../../core/errors/error_reporter.dart';
 import '../../alerts/domain/live_updates.dart';
 import '../../onboarding/domain/enrollment.dart';
 import '../../session/domain/session.dart';
-import 'screens/web_pending_screen.dart';
+import 'screens/web_alerta_screen.dart';
+import 'screens/web_config_screen.dart';
+import 'screens/web_contenidos_screen.dart';
+import 'screens/web_docentes_screen.dart';
+import 'screens/web_fuentes_screen.dart';
+import 'screens/web_informes_screen.dart';
+import 'screens/web_mapa_screen.dart';
+import 'screens/web_monitoreo_screen.dart';
+import 'screens/web_reportes_screen.dart';
 import 'screens/web_resumen_screen.dart';
+import 'screens/web_simulacros_screen.dart';
+import 'screens/web_usuarios_screen.dart';
+import 'screens/web_vinculos_screen.dart';
 import 'web_nav.dart';
 import 'web_style.dart';
 
@@ -32,6 +43,7 @@ class _WebShellState extends State<WebShell> {
       ValueNotifier<Map<WebPage, int>>(const <WebPage, int>{});
 
   WebPage _page = WebPage.resumen;
+  Widget? _detail;
   String? _schoolName;
   bool _started = false;
 
@@ -83,7 +95,17 @@ class _WebShellState extends State<WebShell> {
 
   void _go(WebPage page) {
     if (_scaffold.currentState?.isDrawerOpen ?? false) Navigator.of(context).pop();
-    setState(() => _page = page);
+    setState(() {
+      _page = page;
+      _detail = null;
+    });
+  }
+
+  void _open(Widget screen) => setState(() => _detail = screen);
+
+  void _back() {
+    setState(() => _detail = null);
+    _loadBadges();
   }
 
   Future<void> _signOut() async {
@@ -114,7 +136,19 @@ class _WebShellState extends State<WebShell> {
   Widget _screenFor(WebPage page) {
     return switch (page) {
       WebPage.resumen => WebResumenScreen(session: widget.session),
-      _ => WebPendingScreen(page: page),
+      WebPage.alerta => WebAlertaScreen(session: widget.session),
+      WebPage.monitoreo => const WebMonitoreoScreen(),
+      WebPage.fuentes => const WebFuentesScreen(),
+      WebPage.usuarios => const WebUsuariosScreen(),
+      WebPage.docentes => const WebDocentesScreen(),
+      WebPage.vinculos => const WebVinculosScreen(),
+      WebPage.mapa => const WebMapaScreen(),
+      WebPage.simulacros => const WebSimulacrosScreen(),
+      WebPage.contenidos => const WebContenidosScreen(),
+      WebPage.reportes => const WebReportesScreen(),
+      WebPage.informes => const WebInformesScreen(),
+      WebPage.repeticion => const WebRepeticionScreen(),
+      WebPage.config => const WebConfigScreen(),
     };
   }
 
@@ -132,8 +166,13 @@ class _WebShellState extends State<WebShell> {
 
     return WebNav(
       current: _page,
+      session: widget.session,
       go: _go,
       openMenu: () => _scaffold.currentState?.openDrawer(),
+      open: _open,
+      back: _back,
+      hasDetail: _detail != null,
+      refreshBadges: _loadBadges,
       badges: _badges,
       child: Scaffold(
         key: _scaffold,
@@ -142,7 +181,10 @@ class _WebShellState extends State<WebShell> {
         body: Row(
           children: <Widget>[
             if (!drawer) SizedBox(width: 256, child: ColoredBox(color: WebColors.ink, child: menu)),
-            Expanded(child: KeyedSubtree(key: ValueKey<WebPage>(_page), child: _screenFor(_page))),
+            Expanded(child: KeyedSubtree(
+                key: ValueKey<Object>(_detail ?? _page),
+                child: _detail ?? _screenFor(_page),
+              ),),
           ],
         ),
       ),
