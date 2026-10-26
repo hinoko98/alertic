@@ -202,4 +202,62 @@ void main() {
       expect(find.text('POR GRADO'), findsOneWidget);
     });
   });
+
+  group('53 · reportes de riesgo', () {
+    RiskReport risk(String id, RiskStatus status, String place, {String? details}) => RiskReport(
+          id: id,
+          kind: RiskKind.grieta,
+          place: place,
+          status: status,
+          createdAt: DateTime.now(),
+          details: details,
+          reporterName: 'Laura Pérez',
+          reporterGrade: '9° B',
+        );
+
+    Future<void> openInbox(WidgetTester tester) async {
+      await signInAsAdmin(tester);
+      await tester.tap(find.text('Ver todos'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('abre en lo nuevo, con el detalle del primero y sus acciones', (WidgetTester tester) async {
+      risks.reports.addAll(<RiskReport>[
+        risk('r1', RiskStatus.nuevo, 'Bloque 1, 2.º piso', details: 'Grieta nueva junto a la escalera sur.'),
+        risk('r2', RiskStatus.nuevo, 'Patio central'),
+        risk('r3', RiskStatus.enRevision, 'Laboratorio 2'),
+      ]);
+      await openInbox(tester);
+
+      expect(find.text('2 nuevos · 1 en revisión'), findsOneWidget);
+      expect(find.byKey(const Key('riesgo-abierto-r1')), findsOneWidget);
+      expect(find.textContaining('«Grieta nueva junto a la escalera sur.»'), findsOneWidget);
+      expect(find.text('Asignar revisión'), findsOneWidget);
+      // El de revisión no se ve hasta cambiar de filtro.
+      expect(find.textContaining('Laboratorio 2'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('riesgo-r1-en_revision')));
+      await tester.pumpAndSettle();
+      expect(risks.reports.first.status, RiskStatus.enRevision);
+      expect(find.text('1 nuevo · 2 en revisión'), findsOneWidget);
+    });
+
+    testWidgets('tocar una fila la abre, y los filtros cambian la lista', (WidgetTester tester) async {
+      risks.reports.addAll(<RiskReport>[
+        risk('r1', RiskStatus.nuevo, 'Bloque 1'),
+        risk('r2', RiskStatus.nuevo, 'Patio central'),
+        risk('r3', RiskStatus.atendido, 'Laboratorio 2'),
+      ]);
+      await openInbox(tester);
+
+      await tester.tap(find.byKey(const Key('riesgo-fila-r2')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('riesgo-abierto-r2')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('riesgos-resueltos')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('riesgo-abierto-r3')), findsOneWidget);
+      expect(find.text('Reabrir'), findsOneWidget);
+    });
+  });
 }

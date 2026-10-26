@@ -271,8 +271,7 @@ void main() {
 
       await tester.tap(find.text('Ver todos'));
       await tester.pumpAndSettle();
-      expect(find.text('Grieta o daño'), findsOneWidget);
-      expect(find.textContaining('Bloque B, 2.º piso'), findsOneWidget);
+      expect(find.text('Grieta o daño · Bloque B, 2.º piso'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('riesgo-r1-atendido')));
       await tester.pumpAndSettle();
