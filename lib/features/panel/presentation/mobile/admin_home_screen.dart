@@ -22,9 +22,9 @@ import '../../../risks/domain/risk_repository.dart';
 import '../../../risks/presentation/risk_inbox_screen.dart';
 import '../../../teacher/presentation/screens/new_alert_screen.dart';
 import '../../domain/panel_repository.dart';
-import '../screens/community_tab.dart';
 import '../screens/history_tab.dart';
 import '../screens/protocols_tab.dart';
+import 'admin_codes_screen.dart';
 import 'admin_subpage.dart';
 import 'admin_tracking_screen.dart';
 
@@ -233,7 +233,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   icon: Icons.badge_outlined,
                   title: 'Generar códigos',
                   subtitle: _codesSubtitle(stats),
-                  onTap: () => _open((_) => const AdminSubpage(child: CommunityTab())),
+                  onTap: () => _open((_) => const AdminCodesScreen()),
                 ),
                 _Tile(
                   icon: Icons.map_outlined,
