@@ -84,7 +84,7 @@ class _WhoAreYouScreenState extends State<WhoAreYouScreen> {
           ],
           const SizedBox(height: AppSpacing.lg),
           AppCard(
-            onTap: () => Navigator.of(context).pushNamed(AppRoutes.signIn),
+            onTap: () => Navigator.of(context).pushNamed(AppRoutes.adminSignIn),
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Row(
               children: <Widget>[

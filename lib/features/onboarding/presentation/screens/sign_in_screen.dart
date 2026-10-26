@@ -20,8 +20,20 @@ import '../../domain/enrollment_failure.dart';
 ///
 /// Se ve distinta a propósito —encabezado oscuro— para que nadie la confunda con
 /// el registro de estudiantes y acudientes.
+/// A quién le habla la pantalla. La sesión la decide el servidor por el rol de la
+/// cuenta; esto solo cambia los textos, para que el administrador sepa que está
+/// en su puerta y no en la de los docentes.
+enum SignInAudience { staff, admin }
+
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({this.onSignedIn, this.showBack = true, super.key});
+  const SignInScreen({
+    this.onSignedIn,
+    this.showBack = true,
+    this.audience = SignInAudience.staff,
+    super.key,
+  });
+
+  final SignInAudience audience;
 
   /// Qué hacer al entrar. Sin esto, la app sigue al paso de permisos, que es el
   /// camino del celular. El panel del computador lo usa para ir directo al
@@ -112,8 +124,9 @@ class _SignInScreenState extends State<SignInScreen> {
     // botón fijo abajo se comía el campo de la contraseña. Con el teclado
     // arriba, el botón pasa a ser parte del formulario y baja con él.
     final bool keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final bool admin = widget.audience == SignInAudience.admin;
     final Widget enterButton = PrimaryButton(
-      label: 'Entrar',
+      label: admin ? 'Entrar al panel' : 'Entrar',
       icon: null,
       background: AppColors.ink,
       isLoading: _isSigningIn,
@@ -130,6 +143,7 @@ class _SignInScreenState extends State<SignInScreen> {
           child: Column(
             children: <Widget>[
               _DarkHeader(
+                admin: admin,
                 showBack: widget.showBack,
                 onBack: _isSigningIn ? null : () => Navigator.of(context).pop(),
               ),
@@ -146,7 +160,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     children: <Widget>[
                       const ServerStatusBadge(),
                       const SizedBox(height: AppSpacing.md),
-                      const _FieldLabel('Correo institucional'),
+                      _FieldLabel(admin ? 'Usuario institucional' : 'Correo institucional'),
                       TextField(
                         controller: _email,
                         enabled: !_isSigningIn,
@@ -232,18 +246,22 @@ class _SignInScreenState extends State<SignInScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        const Row(
+                        Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Icon(Icons.info_outline, size: 14, color: AppColors.inkFaint),
-                            SizedBox(width: AppSpacing.sm),
+                            const Icon(Icons.info_outline, size: 14, color: AppColors.inkFaint),
+                            const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
-                                'Tu usuario lo crea Coordinación en el panel del '
-                                'colegio, junto con tu grupo y tu papel en una '
-                                'emergencia. Si eres estudiante o acudiente, vuelve '
-                                'atrás y usa el código de tu carné.',
-                                style: TextStyle(fontSize: 11, color: AppColors.inkMuted),
+                                admin
+                                    ? 'Solo para el responsable de ALERTIC en la '
+                                        'institución. Desde aquí se emiten alertas y se '
+                                        'generan los códigos.'
+                                    : 'Tu usuario lo crea Coordinación en el panel del '
+                                        'colegio, junto con tu grupo y tu papel en una '
+                                        'emergencia. Si eres estudiante o acudiente, vuelve '
+                                        'atrás y usa el código de tu carné.',
+                                style: const TextStyle(fontSize: 11, color: AppColors.inkMuted),
                               ),
                             ),
                           ],
@@ -263,8 +281,9 @@ class _SignInScreenState extends State<SignInScreen> {
 }
 
 class _DarkHeader extends StatelessWidget {
-  const _DarkHeader({required this.showBack, required this.onBack});
+  const _DarkHeader({required this.admin, required this.showBack, required this.onBack});
 
+  final bool admin;
   final bool showBack;
   final VoidCallback? onBack;
 
@@ -301,11 +320,15 @@ class _DarkHeader extends StatelessWidget {
                   color: AppColors.brand,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.lock_outline, size: 22, color: AppColors.onBrand),
+                child: Icon(
+                  admin ? Icons.admin_panel_settings_outlined : Icons.lock_outline,
+                  size: 22,
+                  color: AppColors.onBrand,
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
-              const Text(
-                'Personal del colegio',
+              Text(
+                admin ? 'Administrador del colegio' : 'Personal del colegio',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
@@ -314,8 +337,10 @@ class _DarkHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              const Text(
-                'Docentes, directivos y administrativos.',
+              Text(
+                admin
+                    ? 'Ingreso fijo, sin código de un solo uso.'
+                    : 'Docentes, directivos y administrativos.',
                 style: TextStyle(fontSize: 12, color: Colors.white70),
               ),
             ],
