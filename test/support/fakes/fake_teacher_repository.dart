@@ -17,6 +17,9 @@ class FakeTeacherRepository implements TeacherRepository {
   final Map<String, Map<String, SafetyStatus>> _responses =
       <String, Map<String, SafetyStatus>>{};
 
+  /// Los que el docente marcó a mano, por alerta.
+  final Map<String, Set<String>> _marked = <String, Set<String>>{};
+
   static const List<String> _students = <String>[
     'Laura Camila Pérez Gómez',
     'Sofía Arenas Villamizar',
@@ -63,6 +66,7 @@ class FakeTeacherRepository implements TeacherRepository {
               ? null
               : ReportedLocation.atMeetingPoint,
           reportedAt: responses[name] == null ? null : DateTime.now(),
+          markedByTeacher: _marked[alertId]?.contains(name) ?? false,
         ),
     ];
   }
@@ -72,6 +76,7 @@ class FakeTeacherRepository implements TeacherRepository {
     await Future<void>.delayed(latency);
     _responses.putIfAbsent(alertId, () => <String, SafetyStatus>{})[personId] =
         SafetyStatus.safe;
+    _marked.putIfAbsent(alertId, () => <String>{}).add(personId);
   }
 
   /// El grupo en calma que devuelve la prueba.

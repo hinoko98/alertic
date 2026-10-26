@@ -134,6 +134,7 @@ class RosterEntry {
     this.status,
     this.location,
     this.reportedAt,
+    this.markedByTeacher = false,
   });
 
   final String personId;
@@ -143,6 +144,10 @@ class RosterEntry {
   final SafetyStatus? status;
   final ReportedLocation? location;
   final DateTime? reportedAt;
+
+  /// Lo marcó el docente a mano, no la persona desde su celular. La lista lo
+  /// cuenta aparte: «26 confirmaron, 2 los marcaste tú».
+  final bool markedByTeacher;
 
   bool get hasResponded => status != null;
   bool get needsHelp => status == SafetyStatus.needsHelp;
