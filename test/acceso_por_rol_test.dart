@@ -228,9 +228,9 @@ void main() {
       }
 
       for (final String tab in <String>[
-        'Emergencia',
+        'Panel',
+        'Tablero',
         'Comunidad',
-        'Más',
       ]) {
         expect(find.text(tab), findsOneWidget, reason: 'falta la pestaña $tab');
       }
@@ -264,13 +264,12 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      await tester.tap(find.text('Más'));
-      await tester.pumpAndSettle();
+      // El panel trae la gestión que antes estaba en «Más».
       expect(find.text('Simulacros'), findsOneWidget);
-      expect(find.text('Historial'), findsOneWidget);
-      expect(find.text('Protocolos'), findsOneWidget);
+      expect(find.text('Informes'), findsOneWidget);
+      expect(find.text('Rutas y puntos'), findsOneWidget);
 
-      await tester.tap(find.text('Reportes de riesgo'));
+      await tester.tap(find.text('Ver todos'));
       await tester.pumpAndSettle();
       expect(find.text('Grieta o daño'), findsOneWidget);
       expect(find.textContaining('Bloque B, 2.º piso'), findsOneWidget);

@@ -120,11 +120,13 @@ void main() {
         'Contabilidad2026',
       );
 
-  Future<void> signInAsAdmin(WidgetTester tester) => signInWithPassword(
-        tester,
-        'coordinacion@iic.edu.co',
-        'Barbosa2026Riesgo',
-      );
+  /// Coordinación entra al panel (pantalla 50) y pasa a la pestaña del tablero,
+  /// donde viven los reportes de emergencia y la alerta en curso.
+  Future<void> signInAsAdmin(WidgetTester tester) async {
+    await signInWithPassword(tester, 'coordinacion@iic.edu.co', 'Barbosa2026Riesgo');
+    await tester.tap(find.text('Tablero'));
+    await tester.pumpAndSettle();
+  }
 
   group('el estudiante reporta', () {
     testWidgets('el reporte llega de verdad al repositorio', (

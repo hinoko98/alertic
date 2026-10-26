@@ -13,8 +13,8 @@ import '../features/risks/presentation/report_risk_screen.dart';
 import '../features/guardian/presentation/screens/family_guides_screen.dart';
 import '../features/guardian/presentation/screens/guardian_home_screen.dart';
 import '../features/panel/presentation/screens/community_tab.dart';
+import '../features/panel/presentation/mobile/admin_home_screen.dart';
 import '../features/panel/presentation/screens/emergency_tab.dart';
-import '../features/panel/presentation/screens/more_tab.dart';
 import '../features/student/presentation/screens/student_home_screen.dart';
 import '../features/support/presentation/support_inbox_screen.dart';
 import '../features/teacher/presentation/screens/teacher_group_screen.dart';
@@ -206,11 +206,11 @@ final class GuardianExperience implements RoleExperience {
 
 /// Bloque F en el celular: el panel del colegio.
 ///
-/// Son **las mismas cuatro pantallas** que corren en el computador de
-/// coordinación, no una versión reducida: se adaptan al ancho (ver
-/// [PanelLayout]) en vez de duplicarse. Duplicarlas significaría que el día que
-/// cambie el tablero hay que acordarse de cambiarlo en dos sitios, y en una
-/// emergencia la versión olvidada es la que alguien está mirando.
+/// Abre en el «Panel del colegio» (pantalla 50), un resumen pensado para el
+/// celular. El tablero, la comunidad, el historial y los protocolos son **las
+/// mismas pantallas** del computador de coordinación, abiertas desde ahí: se
+/// adaptan al ancho (ver [PanelLayout]) en vez de duplicarse, porque la versión
+/// olvidada de una pantalla duplicada es la que alguien mira en una emergencia.
 ///
 /// El administrador necesita esto en el bolsillo porque la emergencia no lo
 /// espera en su escritorio: puede estar en el patio cuando haya que finalizar la
@@ -230,7 +230,12 @@ final class AdminExperience implements RoleExperience {
 
     return <AppDestination>[
       AppDestination(
-        label: 'Emergencia',
+        label: 'Panel',
+        icon: Icons.dashboard_outlined,
+        builder: (BuildContext context) => const AdminHomeScreen(),
+      ),
+      AppDestination(
+        label: 'Tablero',
         icon: Icons.warning_amber_outlined,
         builder: (BuildContext context) => const EmergencyTab(),
       ),
@@ -244,11 +249,6 @@ final class AdminExperience implements RoleExperience {
         icon: Icons.forum_outlined,
         showsChatBadge: true,
         builder: (BuildContext context) => const SupportInboxScreen(canAssign: true),
-      ),
-      AppDestination(
-        label: 'Más',
-        icon: Icons.apps_outlined,
-        builder: (BuildContext context) => const MoreTab(),
       ),
       AppDestination(
         label: 'Cuenta',
