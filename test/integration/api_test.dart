@@ -31,7 +31,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// Necesita el servidor corriendo con la matrícula de prueba:
 ///
 /// ```bash
-/// cd ../alerticapi && DATABASE_FILE=./data/demo.db npm run seed:demo && DATABASE_FILE=./data/demo.db npm start
+/// cd ../alerticapi && DATABASE_DIR=./data/demo npm run seed:demo && DATABASE_DIR=./data/demo npm start
 /// flutter test test/integration/api_test.dart
 /// ```
 ///
