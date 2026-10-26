@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../core/cache/sqlite_response_cache.dart';
 import '../core/config/app_config.dart';
 import '../core/constants/app_strings.dart';
 import '../core/errors/error_reporter.dart';
@@ -91,7 +92,13 @@ class AlerticApp extends StatelessWidget {
     // Una sola conexión en vivo para toda la app: la alerta activa, el tablero,
     // la lista del grupo y los hijos escuchan el mismo canal.
     final ApiEventHub hub = ApiEventHub(api);
-    final ApiAlertRepository alerts = ApiAlertRepository(api, hub: hub);
+    // SQLite guarda en el celular lo que se consulta sin red. En el navegador y
+    // en Windows no hay SQLite de `sqflite`: allí se pide siempre al servidor.
+    final ApiAlertRepository alerts = ApiAlertRepository(
+      api,
+      hub: hub,
+      cache: _supportsLocalCache ? SqliteResponseCache() : null,
+    );
 
     return AlerticApp(
       key: key,
@@ -169,6 +176,12 @@ class AlerticApp extends StatelessWidget {
   ///
   /// Se mira con `defaultTargetPlatform` y no con `Platform.isAndroid`: esto
   /// también se compila para web, donde `dart:io` no existe.
+  static bool get _supportsLocalCache =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS);
+
   static bool get _supportsPush =>
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||

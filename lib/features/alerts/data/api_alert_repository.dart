@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../../core/cache/response_cache.dart';
 import '../../../core/errors/error_reporter.dart';
 import '../../../core/network/api_client.dart';
 import '../domain/alert.dart';
@@ -20,10 +21,17 @@ import 'api_event_hub.dart';
 class ApiAlertRepository implements AlertRepository {
   /// [hub] es el canal en vivo compartido. Si no se pasa se crea uno propio, que
   /// sirve para una prueba suelta pero no comparte la conexión con el resto.
-  ApiAlertRepository(this._api, {ApiEventHub? hub}) : _hub = hub ?? ApiEventHub(_api);
+  ///
+  /// Con [cache], los protocolos, los puntos de encuentro y las alertas
+  /// anteriores se guardan en el celular y se leen de ahí cuando el servidor no
+  /// responde: es lo que alguien necesita consultar justo cuando no hay red.
+  ApiAlertRepository(this._api, {ApiEventHub? hub, ResponseCache? cache})
+      : _hub = hub ?? ApiEventHub(_api),
+        _cache = cache; // ignore: prefer_initializing_formals
 
   final ApiClient _api;
   final ApiEventHub _hub;
+  final ResponseCache? _cache;
 
   @override
   Stream<Alert?> watchActiveAlert() async* {
@@ -80,7 +88,7 @@ class ApiAlertRepository implements AlertRepository {
 
   @override
   Future<List<Alert>> loadHistory() async {
-    final Map<String, dynamic> response = await _api.get('/alerts/history');
+    final Map<String, dynamic> response = await cachedGet(_api, _cache, '/alerts/history');
     final Object? raw = response['alerts'];
     if (raw is! List<Object?>) {
       return const <Alert>[];
@@ -94,7 +102,7 @@ class ApiAlertRepository implements AlertRepository {
 
   @override
   Future<List<Protocol>> loadProtocols() async {
-    final Map<String, dynamic> response = await _api.get('/protocols');
+    final Map<String, dynamic> response = await cachedGet(_api, _cache, '/protocols');
     final Object? raw = response['protocols'];
     if (raw is! List<Object?>) {
       return const <Protocol>[];
@@ -120,7 +128,7 @@ class ApiAlertRepository implements AlertRepository {
 
   @override
   Future<List<MeetingPoint>> loadMeetingPoints() async {
-    final Map<String, dynamic> response = await _api.get('/meeting-points');
+    final Map<String, dynamic> response = await cachedGet(_api, _cache, '/meeting-points');
     final Object? raw = response['meetingPoints'];
     if (raw is! List<Object?>) {
       return const <MeetingPoint>[];
