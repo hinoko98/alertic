@@ -1,10 +1,15 @@
+import 'package:alertic/features/alerts/domain/alert_level.dart';
+import 'package:alertic/features/alerts/domain/hazard.dart';
+import 'package:alertic/features/risks/domain/risk_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fakes/fake_alert_repository.dart';
 import 'support/fakes/fake_credentials_repository.dart';
 import 'support/fakes/fake_enrollment_repository.dart';
+import 'support/fakes/fake_incident_repository.dart';
 import 'support/fakes/fake_panel_repository.dart';
+import 'support/fakes/fake_risk_repository.dart';
 import 'support/fakes/fake_teacher_repository.dart';
 import 'support/test_app.dart';
 
@@ -12,10 +17,14 @@ import 'support/test_app.dart';
 void main() {
   late FakeAlertRepository alerts;
   late FakePanelRepository panel;
+  late FakeRiskRepository risks;
+  late FakeIncidentRepository incidents;
 
   setUp(() {
     alerts = FakeAlertRepository(latency: Duration.zero);
     panel = FakePanelRepository(alerts, latency: Duration.zero);
+    risks = FakeRiskRepository();
+    incidents = FakeIncidentRepository(latency: Duration.zero);
   });
   tearDown(() => alerts.dispose());
 
@@ -27,6 +36,8 @@ void main() {
         alertRepository: alerts,
         teacherRepository: FakeTeacherRepository(alerts, latency: Duration.zero),
         panelRepository: panel,
+        riskRepository: risks,
+        incidentRepository: incidents,
       ),
     );
   }
@@ -73,6 +84,58 @@ void main() {
 
       expect(find.text('Administrador del colegio'), findsNothing);
       expect(find.text('Comunidad'), findsWidgets);
+    });
+  });
+
+  group('50 · panel del colegio', () {
+    testWidgets('en calma: emitir alerta, cifras, reportes y gestión', (WidgetTester tester) async {
+      risks.reports.add(
+        RiskReport(
+          id: 'r1',
+          kind: RiskKind.grieta,
+          place: 'Bloque A, 2.º piso',
+          status: RiskStatus.nuevo,
+          createdAt: DateTime.now(),
+          reporterRole: 'estudiante',
+          reporterGrade: '9° B',
+        ),
+      );
+      await signInAsAdmin(tester);
+
+      expect(find.text('Panel del colegio'), findsOneWidget);
+      expect(find.text('Emitir alerta'), findsOneWidget);
+      expect(find.text('912'), findsOneWidget);
+      expect(find.text('48'), findsOneWidget);
+      expect(find.text('Reportes nuevos'), findsOneWidget);
+      expect(find.text('Grieta o daño · Bloque A, 2.º piso'), findsOneWidget);
+      expect(find.text('Estudiante 9° B · ahora'), findsOneWidget);
+      for (final String tile in <String>['Generar códigos', 'Rutas y puntos', 'Simulacros', 'Informes']) {
+        expect(find.text(tile), findsOneWidget, reason: 'falta $tile');
+      }
+    });
+
+    testWidgets('sin reportes lo dice', (WidgetTester tester) async {
+      await signInAsAdmin(tester);
+      expect(find.byKey(const Key('admin-sin-reportes')), findsOneWidget);
+    });
+
+    testWidgets('un reporte de emergencia sin atender lleva al tablero', (WidgetTester tester) async {
+      await incidents.report(Hazard.incendio);
+      await signInAsAdmin(tester);
+
+      expect(find.text('1 reporte de emergencia sin atender'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('admin-emergencias-abiertas')));
+      await tester.pumpAndSettle();
+      expect(find.text('REPORTES DE LA COMUNIDAD'), findsOneWidget);
+    });
+
+    testWidgets('con una alerta en curso, el botón cede su lugar al seguimiento', (WidgetTester tester) async {
+      await signInAsAdmin(tester);
+      alerts.simulate(AlertLevel.roja);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('admin-emitir-alerta')), findsNothing);
+      expect(find.byKey(const Key('admin-alerta-en-curso')), findsOneWidget);
     });
   });
 }
