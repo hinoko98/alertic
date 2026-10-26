@@ -260,4 +260,43 @@ void main() {
       expect(find.text('Reabrir'), findsOneWidget);
     });
   });
+
+  group('54 · códigos de acceso', () {
+    Future<void> openCodes(WidgetTester tester) async {
+      await signInAsAdmin(tester);
+      await tester.tap(find.byKey(const Key('admin-codigos')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('busca a la persona y le emite un código nuevo con confirmación', (WidgetTester tester) async {
+      await openCodes(tester);
+      expect(find.text('Códigos de acceso'), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('codigos-buscar')), 'Pérez');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      // Solo estudiantes y acudientes: los docentes entran con contraseña.
+      expect(find.text('Carlos Jaimes Duarte'), findsNothing);
+      await tester.tap(find.text('Laura Camila Pérez Gómez'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('codigos-emitir')));
+      await tester.pumpAndSettle();
+      expect(find.text('¿Emitir un código nuevo?'), findsOneWidget);
+      await tester.tap(find.text('EMITIR'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('codigos-codigo')), findsOneWidget);
+      expect(find.text('Código nuevo de un solo uso. El anterior quedó desactivado.'), findsOneWidget);
+      expect(find.byKey(const Key('codigos-copiar')), findsOneWidget);
+    });
+
+    testWidgets('muestra el estado de los códigos del colegio', (WidgetTester tester) async {
+      await openCodes(tester);
+      expect(find.text('1031'), findsOneWidget);
+      expect(find.text('217'), findsOneWidget);
+      expect(find.byKey(const Key('codigos-por-curso')), findsOneWidget);
+    });
+  });
 }
