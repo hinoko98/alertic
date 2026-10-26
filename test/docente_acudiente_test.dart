@@ -219,10 +219,12 @@ void main() {
       await tester.tap(find.text('LISTA DEL GRUPO'));
       await tester.pumpAndSettle();
 
-      expect(find.text('SIN RESPUESTA'), findsOneWidget);
-      expect(find.text('Necesita ayuda'), findsOneWidget);
-      expect(find.text('MARCAR A SALVO'), findsWidgets);
-      expect(find.text('ENVIAR REPORTE A COORDINACIÓN'), findsOneWidget);
+      expect(find.text('FALTAN 4'), findsOneWidget);
+      expect(find.text('2 de 6'), findsOneWidget);
+      // Quien pidió ayuda va primero y no se marca a salvo desde la lista.
+      expect(find.textContaining('Pidió ayuda'), findsWidgets);
+      expect(find.text('Está aquí'), findsNWidgets(3));
+      expect(find.text('Enviar lista a Coordinación'), findsOneWidget);
     });
 
     testWidgets('marcar a salvo a quien no tiene celular actualiza el conteo', (
@@ -243,13 +245,45 @@ void main() {
       await tester.tap(find.text('LISTA DEL GRUPO'));
       await tester.pumpAndSettle();
 
-      expect(find.text('/6'), findsOneWidget);
-      expect(find.text('3'), findsOneWidget);
+      expect(find.text('2 de 6'), findsOneWidget);
+      expect(find.text('2 confirmaron en su celular · 0 los marcaste tú'), findsOneWidget);
 
-      await tester.tap(find.text('MARCAR A SALVO').first);
+      await tester.tap(find.text('Está aquí').first);
       await tester.pumpAndSettle();
 
-      expect(find.text('4'), findsOneWidget);
+      expect(find.text('3 de 6'), findsOneWidget);
+      expect(find.text('FALTAN 3'), findsOneWidget);
+      expect(find.text('2 confirmaron en su celular · 1 los marcaste tú'), findsOneWidget);
+    });
+
+    testWidgets('los que están a salvo quedan plegados hasta pedirlos', (
+      WidgetTester tester,
+    ) async {
+      await signInWithPassword(
+        tester,
+        'carlos.jaimes@iic.edu.co',
+        'Contabilidad2026',
+      );
+      alerts.simulate(AlertLevel.roja);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Estoy a salvo'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('LISTA DEL GRUPO'), 200);
+      await tester.ensureVisible(find.text('LISTA DEL GRUPO'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('LISTA DEL GRUPO'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('2 a salvo'), findsOneWidget);
+      expect(find.text('Laura Pérez'), findsNothing);
+
+      await tester.ensureVisible(find.byKey(const Key('ver-a-salvo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('ver-a-salvo')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Laura Pérez'), findsOneWidget);
+      expect(find.text('Ocultar la lista'), findsOneWidget);
     });
   });
 
@@ -304,7 +338,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('abrir-lista-docente')));
       await tester.pumpAndSettle();
-      expect(find.text('Lista del grupo'), findsOneWidget);
+      expect(find.text('Lista · 10° B'), findsOneWidget);
     });
 
     testWidgets('en amarilla lee las mismas instrucciones que todos', (
