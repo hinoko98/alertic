@@ -23,6 +23,10 @@ abstract interface class TeacherRepository {
   /// punto de encuentro y esa persona no tiene celular.
   Future<void> markSafe(String alertId, String personId);
 
+  /// Le entrega a coordinación la lista del grupo. Los números los cuenta el
+  /// servidor con lo que tiene guardado; la app no los declara.
+  Future<RosterSubmission> submitRoster(String alertId, String grade);
+
   /// A cuántas personas les llega una alerta. Se muestra antes de emitirla: quien
   /// la emite tiene que saber el tamaño de lo que está haciendo.
   ///
@@ -124,6 +128,23 @@ class AlertDraft {
       title.trim().isNotEmpty &&
       instructions.isNotEmpty &&
       (level != AlertLevel.roja || (meetingPoint?.isNotEmpty ?? false));
+}
+
+/// Lo que coordinación recibió cuando el docente entregó la lista.
+class RosterSubmission {
+  const RosterSubmission({
+    required this.grade,
+    required this.safe,
+    required this.needHelp,
+    required this.pending,
+    required this.markedByTeacher,
+  });
+
+  final String grade;
+  final int safe;
+  final int needHelp;
+  final int pending;
+  final int markedByTeacher;
 }
 
 /// Una persona en la lista del grupo durante la emergencia.

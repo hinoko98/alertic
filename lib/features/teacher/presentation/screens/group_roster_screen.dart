@@ -85,6 +85,35 @@ class _GroupRosterScreenState extends State<GroupRosterScreen> {
     }
   }
 
+  /// Entrega la lista a coordinación. Los números que se muestran son los que el
+  /// servidor contó, no los de esta pantalla: si difieren, manda el servidor.
+  Future<void> _submit() async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    try {
+      final RosterSubmission sent = await AppScope.of(
+        context,
+      ).teacherRepository!.submitRoster(widget.alert.id, widget.grade);
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'Lista de ${sent.grade} enviada: ${sent.safe} a salvo, '
+              '${sent.needHelp} con ayuda, ${sent.pending} sin respuesta.',
+            ),
+          ),
+        );
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'enviar la lista');
+      final String message = error is ApiException
+          ? error.message
+          : 'No se pudo enviar la lista. Intenta otra vez.';
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
   Future<void> _markSafe(RosterEntry entry) async {
     try {
       await AppScope.of(
@@ -138,19 +167,7 @@ class _GroupRosterScreenState extends State<GroupRosterScreen> {
           child: PrimaryButton(
             label: 'Enviar lista a Coordinación',
             background: AppColors.ink,
-            onPressed: () {
-              ScaffoldMessenger.of(context)
-                ..clearSnackBars()
-                ..showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Lista de ${widget.grade} enviada: '
-                      '${safe.length} a salvo, ${needHelp.length} con ayuda, '
-                      '${pending.length} sin respuesta.',
-                    ),
-                  ),
-                );
-            },
+            onPressed: _submit,
           ),
         ),
       ),

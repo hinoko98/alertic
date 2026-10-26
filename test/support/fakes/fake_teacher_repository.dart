@@ -79,6 +79,24 @@ class FakeTeacherRepository implements TeacherRepository {
     _marked.putIfAbsent(alertId, () => <String>{}).add(personId);
   }
 
+  /// Las listas que el docente entregó, para que la prueba las vea.
+  final List<RosterSubmission> submissions = <RosterSubmission>[];
+
+  @override
+  Future<RosterSubmission> submitRoster(String alertId, String grade) async {
+    await Future<void>.delayed(latency);
+    final Map<String, SafetyStatus> responses = _responses[alertId] ?? <String, SafetyStatus>{};
+    final RosterSubmission submission = RosterSubmission(
+      grade: grade,
+      safe: responses.values.where((SafetyStatus s) => s == SafetyStatus.safe).length,
+      needHelp: responses.values.where((SafetyStatus s) => s == SafetyStatus.needsHelp).length,
+      pending: _students.length - responses.length,
+      markedByTeacher: _marked[alertId]?.length ?? 0,
+    );
+    submissions.add(submission);
+    return submission;
+  }
+
   /// El grupo en calma que devuelve la prueba.
   GroupOverview overview = const GroupOverview(
     grade: '10° B',

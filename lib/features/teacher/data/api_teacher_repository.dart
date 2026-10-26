@@ -80,6 +80,22 @@ class ApiTeacherRepository implements TeacherRepository {
   }
 
   @override
+  Future<RosterSubmission> submitRoster(String alertId, String grade) async {
+    final Map<String, dynamic> raw = await _api.post(
+      '/alerts/${Uri.encodeComponent(alertId)}/roster/submit',
+      body: <String, dynamic>{'grade': grade},
+    );
+    int count(String key) => (raw[key] as num?)?.toInt() ?? 0;
+    return RosterSubmission(
+      grade: raw['grade'] as String? ?? grade,
+      safe: count('safe'),
+      needHelp: count('needHelp'),
+      pending: count('pending'),
+      markedByTeacher: count('markedByTeacher'),
+    );
+  }
+
+  @override
   Future<int?> loadReach() async {
     final Map<String, dynamic> response = await _api.get('/alerts/reach');
     final Object? people = response['people'];
