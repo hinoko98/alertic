@@ -84,14 +84,17 @@ void main() {
     expect(find.text('Gloria Amparo Rueda Sánchez'), findsOneWidget);
   });
 
-  testWidgets('una página sin construir lo dice en vez de fingir', (WidgetTester tester) async {
+  testWidgets('cada página del menú abre su pantalla', (WidgetTester tester) async {
     await pumpGate(tester, const Size(1440, 900));
     await signIn(tester, 'coordinacion@iic.edu.co', 'Barbosa2026Riesgo');
 
     await tester.tap(find.text('Informes'));
     await tester.pumpAndSettle();
+    expect(find.text('Historial de alertas'), findsOneWidget);
 
-    expect(find.textContaining('en construcción'), findsOneWidget);
+    await tester.tap(find.text('Repetición de simulacros'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Todavía no se guarda el movimiento'), findsOneWidget);
   });
 
   testWidgets('en pantalla angosta el menú pasa a un cajón', (WidgetTester tester) async {

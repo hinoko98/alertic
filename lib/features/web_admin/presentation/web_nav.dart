@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../session/domain/session.dart';
+
 import 'web_style.dart';
 
 /// Las pantallas del panel web, en el orden y con los grupos del menú del diseño.
@@ -42,6 +44,7 @@ enum WebSection {
 class WebNav extends InheritedWidget {
   const WebNav({
     required this.current,
+    required this.session,
     required this.go,
     required this.openMenu,
     required this.open,
@@ -54,6 +57,9 @@ class WebNav extends InheritedWidget {
   });
 
   final WebPage current;
+
+  /// Quién tiene abierta la sesión del panel.
+  final Session session;
   final void Function(WebPage page) go;
   final VoidCallback openMenu;
 
