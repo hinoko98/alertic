@@ -26,6 +26,7 @@ import '../screens/community_tab.dart';
 import '../screens/history_tab.dart';
 import '../screens/protocols_tab.dart';
 import 'admin_subpage.dart';
+import 'admin_tracking_screen.dart';
 
 /// Pantalla 50: el panel del colegio en el celular del administrador.
 ///
@@ -152,7 +153,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           ),
           children: <Widget>[
             if (active != null)
-              _ActiveAlertCard(alert: active, onTap: _openBoard)
+              _ActiveAlertCard(
+                alert: active,
+                onTap: () => _open((_) => AdminTrackingScreen(alert: active)),
+              )
             else
               _IssueButton(
                 onPressed: () => _open((_) => const NewAlertScreen(groups: <String>[])),
