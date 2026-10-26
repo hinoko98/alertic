@@ -47,6 +47,9 @@ abstract final class AppRoutes {
   /// «Ya tengo cuenta»: docentes y administradores.
   static const String signIn = '/ingresar';
 
+  /// La misma puerta, con los textos del administrador del colegio.
+  static const String adminSignIn = '/ingresar/administrador';
+
   /// La app ya registrada. Recibe la sesión emitida por el servidor.
   static const String home = '/inicio';
 
@@ -69,6 +72,7 @@ abstract final class AppRoutes {
       guardianLinked => _guardianLinkedRoute(settings),
       permissions => _route(const PermissionsScreen(), settings),
       signIn => _route(const SignInScreen(), settings),
+      adminSignIn => _route(const SignInScreen(audience: SignInAudience.admin), settings),
       confirmIdentity => _confirmIdentityRoute(settings),
       home => _homeRoute(settings),
       chat => _route(const SupportChatScreen(), settings),
