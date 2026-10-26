@@ -19,7 +19,7 @@ import '../../../alerts/presentation/widgets/hazard_icon.dart';
 import '../../domain/teacher_repository.dart';
 import '../widgets/hold_to_send_button.dart';
 
-/// Pantalla 14: emitir una alerta.
+/// Pantallas 14 y 51: emitir una alerta (docente y administrador).
 ///
 /// Tres decisiones en una sola pantalla —qué pasa, qué tan grave, dónde— porque
 /// quien la usa lo hace con el edificio moviéndose. Nada de pasos ni de
@@ -183,7 +183,7 @@ class _NewAlertScreenState extends State<NewAlertScreen> {
   @override
   Widget build(BuildContext context) {
     return AppPage(
-      title: _drill ? 'Nuevo simulacro' : 'NUEVA ALERTA',
+      title: _drill ? 'Nuevo simulacro' : 'Emitir alerta',
       subtitle: 'Llega a todo el colegio al instante',
       onBack: _sending ? null : () => Navigator.of(context).maybePop(),
       showHelp: false,
@@ -209,7 +209,7 @@ class _NewAlertScreenState extends State<NewAlertScreen> {
               ),
               const SizedBox(height: AppSpacing.md),
               HoldToSendButton(
-                label: 'MANTÉN PARA ENVIAR',
+                label: _reach == null ? 'MANTÉN PARA ENVIAR' : 'MANTÉN PARA ENVIAR A $_reach',
                 enabled: _isComplete && !_sending,
                 isSending: _sending,
                 background: _level == null
@@ -254,6 +254,16 @@ class _NewAlertScreenState extends State<NewAlertScreen> {
                 ),
             ],
           ),
+          if (_hazard != null && _level != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.lg),
+            const _StepLabel(number: 4, label: 'Mensaje que llega'),
+            _MessagePreview(
+              // Cambia con cada elección: la vista previa es lo que se enviará.
+              key: ValueKey<String>('${_hazard!.name}-${_level!.name}-$_drill'),
+              title: _drill ? _drillTitle(_hazard!) : _titleFor(_hazard!, _level!),
+              instructions: _instructionsFor(_hazard!, _level!, AppScope.of(context)),
+            ),
+          ],
           const SizedBox(height: AppSpacing.lg),
           AppCard(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -362,6 +372,65 @@ class _NewAlertScreenState extends State<NewAlertScreen> {
       'Quédate en tu salón',
       'Espera nuevas indicaciones',
     ];
+  }
+}
+
+/// Lo que leerá cada celular, antes de enviarlo.
+///
+/// No se edita a propósito: las instrucciones salen del protocolo que
+/// coordinación publicó, y un texto libre escrito con prisa que le llega a todo
+/// el colegio es un riesgo que no hace falta correr. Para cambiarlo, se cambia
+/// el protocolo.
+class _MessagePreview extends StatefulWidget {
+  const _MessagePreview({required this.title, required this.instructions, super.key});
+
+  final String title;
+  final Future<List<String>> instructions;
+
+  @override
+  State<_MessagePreview> createState() => _MessagePreviewState();
+}
+
+class _MessagePreviewState extends State<_MessagePreview> {
+  List<String>? _steps;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.instructions.then((List<String> steps) {
+      if (mounted) setState(() => _steps = steps);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<String>? steps = _steps;
+    return AppCard(
+      key: const Key('vista-previa-alerta'),
+      color: AppColors.surfaceAlt,
+      borderColor: AppColors.surfaceAlt,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(widget.title, style: AppTextStyles.itemTitle),
+          const SizedBox(height: AppSpacing.xs),
+          if (steps == null)
+            const Text('Preparando el mensaje…', style: AppTextStyles.caption)
+          else
+            for (final String step in steps)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text('• $step', style: AppTextStyles.body),
+              ),
+          const SizedBox(height: AppSpacing.sm),
+          const Text(
+            'Sale del protocolo publicado. Para cambiarlo, edita el protocolo.',
+            style: AppTextStyles.caption,
+          ),
+        ],
+      ),
+    );
   }
 }
 

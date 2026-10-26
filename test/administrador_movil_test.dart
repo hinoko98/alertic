@@ -138,4 +138,25 @@ void main() {
       expect(find.byKey(const Key('admin-alerta-en-curso')), findsOneWidget);
     });
   });
+
+  group('51 · emitir alerta desde el panel', () {
+    testWidgets('muestra el mensaje que llegará antes de enviarlo', (WidgetTester tester) async {
+      await signInAsAdmin(tester);
+      await tester.tap(find.byKey(const Key('admin-emitir-alerta')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Emitir alerta'), findsOneWidget);
+      expect(find.byKey(const Key('vista-previa-alerta')), findsNothing);
+
+      await tester.tap(find.text(Hazard.sismo.label));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(AlertLevel.roja.label));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.byKey(const Key('vista-previa-alerta')), 200);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('vista-previa-alerta')), findsOneWidget);
+      expect(find.textContaining('Sale del protocolo publicado'), findsOneWidget);
+    });
+  });
 }

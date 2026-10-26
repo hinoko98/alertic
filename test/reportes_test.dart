@@ -247,7 +247,7 @@ void main() {
       await tester.tap(find.text('EMITIR ALERTA'));
       await tester.pumpAndSettle();
 
-      expect(find.text('NUEVA ALERTA'), findsOneWidget);
+      expect(find.text('Emitir alerta'), findsOneWidget);
     });
   });
 
