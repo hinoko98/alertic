@@ -140,6 +140,7 @@ class ApiTeacherRepository implements TeacherRepository {
       status: _status(item['status'] as String?),
       location: _location(item['location'] as String?),
       reportedAt: DateTime.tryParse(item['reportedAt'] as String? ?? '')?.toLocal(),
+      markedByTeacher: item['markedByTeacher'] == true,
     );
   }
 
