@@ -159,4 +159,47 @@ void main() {
       expect(find.textContaining('Sale del protocolo publicado'), findsOneWidget);
     });
   });
+
+  group('52 · seguimiento en vivo', () {
+    Future<void> openTracking(WidgetTester tester) async {
+      await signInAsAdmin(tester);
+      alerts.simulate(AlertLevel.roja);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('admin-alerta-en-curso')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a salvo, sin confirmar, pedidos de ayuda y puntos', (WidgetTester tester) async {
+      await openTracking(tester);
+
+      expect(find.text('Seguimiento en vivo'), findsOneWidget);
+      expect(find.text('858'), findsOneWidget);
+      expect(find.text('de 960 · 89 %'), findsOneWidget);
+      expect(find.text('Sin confirmar'), findsOneWidget);
+      expect(find.text('Piden ayuda'), findsOneWidget);
+      expect(find.byKey(const Key('seguimiento-ayuda')), findsOneWidget);
+    });
+
+    testWidgets('finalizar pide confirmación y vuelve al panel en calma', (WidgetTester tester) async {
+      await openTracking(tester);
+
+      await tester.tap(find.byKey(const Key('seguimiento-finalizar')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('¿Finalizar la alerta'), findsOneWidget);
+      await tester.tap(find.text('SÍ, FINALIZAR'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Seguimiento en vivo'), findsNothing);
+      expect(find.byKey(const Key('admin-emitir-alerta')), findsOneWidget);
+    });
+
+    testWidgets('«Tablero completo» cambia a la pestaña del tablero', (WidgetTester tester) async {
+      await openTracking(tester);
+      await tester.tap(find.byKey(const Key('seguimiento-tablero')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Seguimiento en vivo'), findsNothing);
+      expect(find.text('POR GRADO'), findsOneWidget);
+    });
+  });
 }
