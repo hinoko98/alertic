@@ -264,6 +264,8 @@ void main() {
   group('54 · códigos de acceso', () {
     Future<void> openCodes(WidgetTester tester) async {
       await signInAsAdmin(tester);
+      await tester.ensureVisible(find.byKey(const Key('admin-codigos')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('admin-codigos')));
       await tester.pumpAndSettle();
     }

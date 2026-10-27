@@ -16,6 +16,9 @@ import '../../../alerts/domain/alert.dart';
 import '../../../alerts/domain/live_updates.dart';
 import '../../../alerts/domain/meeting_point.dart';
 import '../../../alerts/presentation/widgets/end_alert.dart';
+import '../../../coordination/domain/coordination_repository.dart';
+import '../../../coordination/presentation/coordination_actions.dart';
+import '../../../onboarding/domain/person_name.dart';
 import '../../domain/panel_repository.dart';
 
 /// Pantalla 52: seguimiento en vivo de una alerta, en el celular de coordinación.
@@ -36,6 +39,12 @@ class _AdminTrackingScreenState extends State<AdminTrackingScreen> {
   EmergencyBoard? _board;
   Map<String, String> _pointNames = const <String, String>{};
   bool _failed = false;
+
+  /// Quién va por cada persona que pidió ayuda: id de la persona → nombre.
+  Map<String, String> _assignees = const <String, String>{};
+
+  /// Las listas que ya entregaron los docentes.
+  List<DeliveredRoster> _rosters = const <DeliveredRoster>[];
 
   StreamSubscription<LiveChange>? _live;
   StreamSubscription<Alert?>? _active;
@@ -75,6 +84,7 @@ class _AdminTrackingScreenState extends State<AdminTrackingScreen> {
   Future<void> _load() async {
     final PanelRepository? panel = AppScope.of(context).panelRepository;
     if (panel == null) return;
+    unawaited(_loadCoordination());
     try {
       final EmergencyBoard board = await panel.loadBoard(widget.alert.id);
       if (mounted) {
@@ -86,6 +96,36 @@ class _AdminTrackingScreenState extends State<AdminTrackingScreen> {
     } catch (error, stack) {
       ErrorReporter.report(error, stack, context: 'seguimiento en vivo');
       if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  /// A quién se mandó por cada pedido y qué listas llegaron. Si falla, el
+  /// tablero se ve igual: solo faltan esos dos datos.
+  Future<void> _loadCoordination() async {
+    final CoordinationRepository? coordination = AppScope.of(context).coordinationRepository;
+    if (coordination == null) return;
+    try {
+      final List<HelpAssignment> assignments = await coordination.loadHelpAssignments(widget.alert.id);
+      final List<DeliveredRoster> rosters = await coordination.loadDeliveredRosters(widget.alert.id);
+      if (!mounted) return;
+      setState(() {
+        _assignees = <String, String>{for (final HelpAssignment a in assignments) a.personId: a.assignee};
+        _rosters = rosters;
+      });
+    } catch (error, stack) {
+      ErrorReporter.report(error, stack, context: 'brigadistas y listas');
+    }
+  }
+
+  Future<void> _assign(HelpRequest request) async {
+    final String? who = await assignHelp(
+      context,
+      alertId: widget.alert.id,
+      personId: request.personId,
+      personName: request.fullName,
+    );
+    if (who != null && mounted) {
+      setState(() => _assignees = <String, String>{..._assignees, request.personId: who});
     }
   }
 
@@ -129,7 +169,23 @@ class _AdminTrackingScreenState extends State<AdminTrackingScreen> {
             AppSpacing.screenGutter,
             AppSpacing.md,
           ),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              OutlinedButton.icon(
+                key: const Key('seguimiento-actualizacion'),
+                onPressed: () => sendAlertUpdate(context, widget.alert),
+                icon: const Icon(Icons.campaign_outlined, size: 20),
+                label: const Text('Enviar actualización', style: TextStyle(fontWeight: FontWeight.w800)),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  foregroundColor: AppColors.brandDark,
+                  side: const BorderSide(color: AppColors.brandSoft),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
             children: <Widget>[
               Expanded(
                 child: OutlinedButton(
@@ -155,6 +211,8 @@ class _AdminTrackingScreenState extends State<AdminTrackingScreen> {
                   child: const Text('Finalizar alerta', style: TextStyle(fontWeight: FontWeight.w800)),
                 ),
               ),
+            ],
+          ),
             ],
           ),
         ),
@@ -203,11 +261,30 @@ class _AdminTrackingScreenState extends State<AdminTrackingScreen> {
                         children: <Widget>[
                           for (int i = 0; i < board.needHelpList.length; i++) ...<Widget>[
                             if (i > 0) const Divider(height: 1, color: AppColors.border),
-                            _HelpRow(request: board.needHelpList[i]),
+                            _HelpRow(
+                              request: board.needHelpList[i],
+                              assignee: _assignees[board.needHelpList[i].personId],
+                              onAssign: () => _assign(board.needHelpList[i]),
+                            ),
                           ],
                         ],
                       ),
                     ),
+                  if (_rosters.isNotEmpty) ...<Widget>[
+                    const SectionLabel('Listas entregadas'),
+                    AppCard(
+                      key: const Key('seguimiento-listas'),
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      child: Column(
+                        children: <Widget>[
+                          for (int i = 0; i < _rosters.length; i++) ...<Widget>[
+                            if (i > 0) const Divider(height: 1, color: AppColors.border),
+                            _RosterRow(roster: _rosters[i]),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                   if (board.byMeetingPoint.isNotEmpty) ...<Widget>[
                     const SectionLabel('Por punto de encuentro'),
                     AppCard(
@@ -371,9 +448,13 @@ class _Box extends StatelessWidget {
 }
 
 class _HelpRow extends StatelessWidget {
-  const _HelpRow({required this.request});
+  const _HelpRow({required this.request, required this.assignee, required this.onAssign});
 
   final HelpRequest request;
+
+  /// Quién va, si coordinación ya mandó a alguien.
+  final String? assignee;
+  final VoidCallback onAssign;
 
   @override
   Widget build(BuildContext context) {
@@ -405,6 +486,30 @@ class _HelpRow extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(width: AppSpacing.sm),
+          // Ya asignado se puede reasignar: quien iba puede estar atendiendo a otro.
+          if (assignee != null)
+            ActionChip(
+              key: Key('ayuda-asignada-${request.personId}'),
+              onPressed: onAssign,
+              backgroundColor: AppColors.successSoft,
+              side: BorderSide.none,
+              label: Text(
+                'Va ${PersonName.firstName(assignee!)}',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.success),
+              ),
+            )
+          else
+            FilledButton(
+              key: Key('ayuda-asignar-${request.personId}'),
+              onPressed: onAssign,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.brand,
+                minimumSize: const Size(0, 40),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+              ),
+              child: const Text('Asignar', style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
         ],
       ),
     );
@@ -416,4 +521,35 @@ class _HelpRow extends StatelessWidget {
         'otra_persona' => Icons.person_search_outlined,
         _ => Icons.error_outline,
       };
+}
+
+/// Una lista de grupo que llegó de un docente.
+class _RosterRow extends StatelessWidget {
+  const _RosterRow({required this.roster});
+
+  final DeliveredRoster roster;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('${roster.grade} · ${PersonName.short(roster.teacher)}', style: AppTextStyles.itemTitle),
+                Text(
+                  '${roster.safe} a salvo · ${roster.needHelp} con ayuda · ${roster.pending} sin respuesta',
+                  style: AppTextStyles.caption,
+                ),
+              ],
+            ),
+          ),
+          Text(Fmt.hour(roster.submittedAt), style: AppTextStyles.caption),
+        ],
+      ),
+    );
+  }
 }

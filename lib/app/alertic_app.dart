@@ -19,6 +19,8 @@ import '../features/account/domain/account_repository.dart';
 import '../features/alerts/data/api_alert_repository.dart';
 import '../features/drills/data/api_drill_repository.dart';
 import '../features/drills/domain/drill_repository.dart';
+import '../features/coordination/data/api_coordination_repository.dart';
+import '../features/coordination/domain/coordination_repository.dart';
 import '../features/risks/data/api_risk_repository.dart';
 import '../features/risks/domain/risk_repository.dart';
 import '../features/alerts/data/api_event_hub.dart';
@@ -69,6 +71,7 @@ class AlerticApp extends StatelessWidget {
     this.accountRepository,
     this.drillRepository,
     this.riskRepository,
+    this.coordinationRepository,
     this.locationService = const NoLocationService(),
     this.showSplash = false,
     this.webAdmin = false,
@@ -115,6 +118,7 @@ class AlerticApp extends StatelessWidget {
       accountRepository: ApiAccountRepository(api),
       drillRepository: ApiDrillRepository(api),
       riskRepository: ApiRiskRepository(api),
+      coordinationRepository: ApiCoordinationRepository(api),
       locationService: const GeolocatorLocationService(),
       liveUpdates: ApiLiveUpdates(hub),
       serverStatus: ApiServerStatus(api),
@@ -159,6 +163,7 @@ class AlerticApp extends StatelessWidget {
   final AccountRepository? accountRepository;
   final DrillRepository? drillRepository;
   final RiskRepository? riskRepository;
+  final CoordinationRepository? coordinationRepository;
 
   /// La ubicación del celular. Sin GPS (pruebas) no hay punto azul.
   final LocationService locationService;
@@ -204,6 +209,7 @@ class AlerticApp extends StatelessWidget {
       accountRepository: accountRepository,
       drillRepository: drillRepository,
       riskRepository: riskRepository,
+      coordinationRepository: coordinationRepository,
       locationService: locationService,
       liveUpdates: liveUpdates,
       serverStatus: serverStatus,
