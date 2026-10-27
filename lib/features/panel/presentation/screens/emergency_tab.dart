@@ -12,6 +12,7 @@ import '../../../alerts/domain/live_updates.dart';
 import '../../../alerts/presentation/widgets/alert_level_style.dart';
 import '../../../alerts/presentation/widgets/end_alert.dart';
 import '../../../alerts/presentation/widgets/hazard_icon.dart';
+import '../../../coordination/presentation/coordination_actions.dart';
 import '../../../incidents/domain/incident.dart';
 import '../../../incidents/presentation/incident_inbox.dart';
 import '../../../onboarding/domain/person_name.dart';
@@ -190,6 +191,7 @@ class _EmergencyTabState extends State<EmergencyTab> {
                           _BoardPanel(board: _board, compact: true),
                         const Divider(height: 1, color: AppColors.border),
                         _SidePanel(
+                          alertId: _loadedAlertId,
                           board: _board,
                           signals: _signals,
                           onDismiss: _dismiss,
@@ -214,6 +216,7 @@ class _EmergencyTabState extends State<EmergencyTab> {
                         Expanded(
                           flex: 2,
                           child: _SidePanel(
+                            alertId: _loadedAlertId,
                             board: _board,
                             signals: _signals,
                             onDismiss: _dismiss,
@@ -278,7 +281,7 @@ class _AlertHeader extends StatelessWidget {
     final List<Widget> actions = <Widget>[
       _HeaderButton(
         label: 'ENVIAR ACTUALIZACIÓN',
-        onTap: () => _updatesPending(context),
+        onTap: () => sendAlertUpdate(context, alert),
       ),
       const SizedBox(width: AppSpacing.sm),
       _HeaderButton(
@@ -320,18 +323,6 @@ class _AlertHeader extends StatelessWidget {
     );
   }
 
-  /// Las actualizaciones a la comunidad («ya estamos en el punto», «falta el
-  /// bloque B») necesitan una ruta en el servidor que todavía no existe. Se dice
-  /// así, en vez de fingir que se mandó.
-  static void _updatesPending(BuildContext context) {
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(
-        const SnackBar(
-          content: Text('El envío de actualizaciones a la comunidad llega después.'),
-        ),
-      );
-  }
 }
 
 class _HeaderButton extends StatelessWidget {
@@ -608,12 +599,15 @@ class _GradeRow extends StatelessWidget {
 /// Columna derecha: quién necesita ayuda y los avisos externos.
 class _SidePanel extends StatelessWidget {
   const _SidePanel({
+    required this.alertId,
     required this.board,
     required this.signals,
     required this.onDismiss,
     this.compact = false,
   });
 
+  /// La alerta en curso, para mandar a alguien por quien pidió ayuda.
+  final String? alertId;
   final EmergencyBoard? board;
   final List<HazardSignal> signals;
   final Future<void> Function(HazardSignal) onDismiss;
@@ -646,7 +640,7 @@ class _SidePanel extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           for (final HelpRequest request in data.needHelpList)
-            _HelpRow(request: request),
+            _HelpRow(alertId: alertId, request: request),
           const SizedBox(height: AppSpacing.xl),
         ],
         if (data != null && data.byMeetingPoint.isNotEmpty) ...<Widget>[
@@ -698,8 +692,9 @@ class _SidePanel extends StatelessWidget {
 }
 
 class _HelpRow extends StatelessWidget {
-  const _HelpRow({required this.request});
+  const _HelpRow({required this.alertId, required this.request});
 
+  final String? alertId;
   final HelpRequest request;
 
   @override
@@ -760,14 +755,16 @@ class _HelpRow extends StatelessWidget {
             ),
           ),
           OutlinedButton(
-            onPressed: () {
-              // TODO(brigadas): asignar brigadista desde el panel.
-              ScaffoldMessenger.of(context)
-                ..clearSnackBars()
-                ..showSnackBar(
-                  const SnackBar(content: Text('Asignación de brigadas: pendiente.')),
-                );
-            },
+            key: Key('asignar-${request.personId}'),
+            // Le llega un aviso a quien se mande, con quién es y dónde está.
+            onPressed: alertId == null
+                ? null
+                : () => assignHelp(
+                      context,
+                      alertId: alertId!,
+                      personId: request.personId,
+                      personName: request.fullName,
+                    ),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.ink,
               side: const BorderSide(color: AppColors.border),
