@@ -7,6 +7,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../onboarding/domain/person_name.dart';
 import '../../../alerts/domain/meeting_point.dart';
+import '../../../coordination/presentation/preparation_editors.dart';
 import '../../domain/community_admin.dart';
 import '../../domain/panel_repository.dart';
 import 'admin_fields.dart';
@@ -506,6 +507,13 @@ class _PersonEditorState extends State<_PersonEditor> {
                           if (_notice != null)
                             InlineNotice(_notice!, isError: _noticeIsError),
                           ..._form(person!),
+                          // Lo que se deja listo para la emergencia: la tarea del
+                          // docente o quién va por el estudiante.
+                          EmergencyPreparation(
+                            personId: person.id,
+                            role: person.role,
+                            grade: person.grade,
+                          ),
                           ..._credentials(person),
                         ],
                       ),
