@@ -8,6 +8,7 @@ import '../core/notifications/notification_service.dart';
 import '../features/account/domain/account_repository.dart';
 import '../features/alerts/domain/alert_repository.dart';
 import '../features/drills/domain/drill_repository.dart';
+import '../features/coordination/domain/coordination_repository.dart';
 import '../features/risks/domain/risk_repository.dart';
 import '../features/alerts/domain/live_updates.dart';
 import '../features/guardian/domain/guardian_repository.dart';
@@ -43,6 +44,7 @@ class AppScope extends InheritedWidget {
     this.accountRepository,
     this.drillRepository,
     this.riskRepository,
+    this.coordinationRepository,
     this.locationService = const NoLocationService(),
     super.key,
   });
@@ -99,6 +101,10 @@ class AppScope extends InheritedWidget {
   /// Reportes de riesgo: una grieta, un cable suelto.
   final RiskRepository? riskRepository;
 
+  /// Lo que coordinación hace durante la alerta y prepara antes. Solo el
+  /// administrador; nulo para los demás roles.
+  final CoordinationRepository? coordinationRepository;
+
   /// La ubicación del celular, para el mapa y la ruta en vivo. Por omisión no hay.
   final LocationService locationService;
 
@@ -127,5 +133,6 @@ class AppScope extends InheritedWidget {
       oldWidget.accountRepository != accountRepository ||
       oldWidget.drillRepository != drillRepository ||
       oldWidget.riskRepository != riskRepository ||
+      oldWidget.coordinationRepository != coordinationRepository ||
       oldWidget.locationService != locationService;
 }

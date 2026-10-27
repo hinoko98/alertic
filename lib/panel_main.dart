@@ -16,6 +16,7 @@ import 'core/theme/app_colors.dart';
 import 'core/theme/app_spacing.dart';
 import 'core/theme/app_text_styles.dart';
 import 'core/theme/app_theme.dart';
+import 'features/coordination/data/api_coordination_repository.dart';
 import 'features/alerts/data/api_event_hub.dart';
 import 'features/alerts/data/api_alert_repository.dart';
 import 'features/alerts/data/logging_alert_repository.dart';
@@ -84,6 +85,7 @@ class _PanelAppState extends State<PanelApp> {
       // repositorio y las mismas rutas, el servidor decide quién puede.
       teacherRepository: ApiTeacherRepository(_api),
       incidentRepository: ApiIncidentRepository(_api),
+      coordinationRepository: ApiCoordinationRepository(_api),
       liveUpdates: ApiLiveUpdates(_hub),
       serverStatus: ApiServerStatus(_api),
       child: MaterialApp(

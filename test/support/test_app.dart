@@ -6,6 +6,7 @@ import 'package:alertic/core/notifications/notification_service.dart';
 import 'package:alertic/core/notifications/silent_notification_service.dart';
 import 'package:alertic/features/account/domain/account_repository.dart';
 import 'package:alertic/features/alerts/domain/alert_repository.dart';
+import 'package:alertic/features/coordination/domain/coordination_repository.dart';
 import 'package:alertic/features/drills/domain/drill_repository.dart';
 import 'package:alertic/features/risks/domain/risk_repository.dart';
 import 'package:alertic/features/alerts/domain/live_updates.dart';
@@ -24,6 +25,7 @@ import 'package:flutter/widgets.dart';
 
 import 'fakes/fake_account_repository.dart';
 import 'fakes/fake_alert_repository.dart';
+import 'fakes/fake_coordination_repository.dart';
 import 'fakes/fake_drill_repository.dart';
 import 'fakes/fake_risk_repository.dart';
 import 'fakes/fake_credentials_repository.dart';
@@ -56,6 +58,7 @@ AlerticApp testApp({
   AccountRepository? accountRepository,
   DrillRepository? drillRepository,
   RiskRepository? riskRepository,
+  CoordinationRepository? coordinationRepository,
   LocationService? locationService,
   LiveUpdates? liveUpdates,
   NotificationService? notifications,
@@ -87,6 +90,7 @@ AlerticApp testApp({
     accountRepository: accountRepository ?? FakeAccountRepository(),
     drillRepository: drillRepository ?? FakeDrillRepository(),
     riskRepository: riskRepository ?? fakeRisks,
+    coordinationRepository: coordinationRepository ?? FakeCoordinationRepository(),
     locationService: locationService ?? const NoLocationService(),
     liveUpdates: liveUpdates ??
         _Merged(<LiveUpdates>[
