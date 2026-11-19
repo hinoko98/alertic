@@ -1,8 +1,11 @@
 import '../../alerts/domain/alert.dart';
+import '../../alerts/domain/alert_level.dart';
 import '../../alerts/domain/hazard.dart';
 import '../../alerts/domain/meeting_point.dart';
 import '../../alerts/domain/protocol.dart';
+import '../../teacher/domain/teacher_repository.dart';
 import 'community_admin.dart';
+import 'hazard_watch.dart';
 
 /// Lo que el panel del colegio necesita saber.
 ///
@@ -18,11 +21,30 @@ abstract interface class PanelRepository {
   /// Resumen para el encabezado de la pestaña de comunidad.
   Future<CommunityStats> loadStats();
 
-  /// Avisos de fuentes externas pendientes de revisar.
-  Future<List<HazardSignal>> loadSignals();
+  /// Avisos de amenazas: por omisión, los pendientes de revisar.
+  Future<List<HazardSignal>> loadSignals({SignalStatus status = SignalStatus.pending});
 
-  /// Coordinación descarta un aviso que no amerita alerta.
+  /// Se descarta un aviso que no amerita alerta.
   Future<void> dismissSignal(String signalId);
+
+  /// Una persona escribe un aviso que ninguna fuente detecta (un incendio).
+  /// Queda pendiente hasta que **otra** persona lo apruebe.
+  Future<HazardSignal> reportHazard(ManualHazardReport report);
+
+  /// La segunda llave: otra persona confirma que el aviso es real.
+  ///
+  /// Lanza [PanelActionFailure] si quien aprueba es quien lo escribió.
+  Future<HazardSignal> approveSignal(String signalId, {String? note});
+
+  /// Convierte un aviso en alerta. El servidor la rechaza si al aviso le falta
+  /// la segunda aprobación.
+  Future<Alert> issueAlertFromSignal(String signalId, AlertDraft draft);
+
+  /// Fuentes, umbrales y estado de la vigilancia de amenazas.
+  Future<HazardWatchOverview> loadHazardWatch();
+
+  /// Guarda los umbrales. Solo coordinación.
+  Future<HazardSettings> saveHazardSettings(HazardSettings settings);
 
   /// Alertas anteriores.
   Future<List<Alert>> loadHistory();
@@ -254,7 +276,44 @@ class HazardSignal {
     required this.occurredAt,
     this.magnitude,
     this.distanceKm,
+    this.status = SignalStatus.pending,
+    this.suggestedLevel,
+    this.needsApproval = false,
+    this.canEmit = true,
+    this.reportedBy,
+    this.reportedById,
+    this.approvedBy,
+    this.approvedAt,
+    this.alertId,
   });
+
+  final SignalStatus status;
+
+  /// Nivel que el sistema sugiere (por magnitud, distancia o lluvia). Es una
+  /// sugerencia: decide una persona.
+  final AlertLevel? suggestedLevel;
+
+  /// Lo escribió una persona y pide la aprobación de **otra**.
+  final bool needsApproval;
+
+  /// Se puede convertir en alerta: está pendiente y no le falta aprobación.
+  final bool canEmit;
+
+  /// Quién lo escribió, si fue una persona.
+  final String? reportedBy;
+  final String? reportedById;
+
+  /// Quién dio la segunda aprobación.
+  final String? approvedBy;
+  final DateTime? approvedAt;
+
+  /// La alerta en la que se convirtió, si se convirtió.
+  final String? alertId;
+
+  bool get isManual => reportedById != null;
+
+  /// Falta la segunda aprobación.
+  bool get awaitingApproval => needsApproval && approvedBy == null;
 
   final String id;
   final String source;

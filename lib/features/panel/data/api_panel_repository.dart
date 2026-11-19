@@ -1,11 +1,15 @@
 import '../../../core/errors/error_reporter.dart';
 import '../../../core/network/api_client.dart';
+import '../../alerts/data/alert_mapper.dart';
 import '../../alerts/domain/alert.dart';
+import '../../alerts/domain/alert_level.dart';
 import '../../alerts/domain/alert_repository.dart';
 import '../../alerts/domain/hazard.dart';
 import '../../alerts/domain/meeting_point.dart';
 import '../../alerts/domain/protocol.dart';
+import '../../teacher/domain/teacher_repository.dart';
 import '../domain/community_admin.dart';
+import '../domain/hazard_watch.dart';
 import '../domain/panel_repository.dart';
 
 /// El panel del colegio contra la API real.
@@ -116,31 +120,176 @@ class ApiPanelRepository implements PanelRepository {
   }
 
   @override
-  Future<List<HazardSignal>> loadSignals() async {
-    final Map<String, dynamic> raw = await _api.get('/hazards/signals');
+  Future<List<HazardSignal>> loadSignals({SignalStatus status = SignalStatus.pending}) async {
+    final Map<String, dynamic> raw = await _api.get('/hazards/signals?status=${status.wire}');
 
     return <HazardSignal>[
       for (final Object? item in raw['signals'] as List<Object?>? ?? const <Object?>[])
         if (item is Map<String, dynamic>)
-          if (Hazard.tryParse(item['hazard'] as String?) case final Hazard hazard)
-            HazardSignal(
-              id: item['id'] as String? ?? '',
-              source: item['source'] as String? ?? '',
-              hazard: hazard,
-              headline: item['headline'] as String? ?? '',
-              detail: item['detail'] as String? ?? '',
-              occurredAt:
-                  DateTime.tryParse(item['occurredAt'] as String? ?? '')?.toLocal() ??
-                      DateTime.now(),
-              magnitude: (item['magnitude'] as num?)?.toDouble(),
-              distanceKm: (item['distanceKm'] as num?)?.round(),
-            ),
+          if (_signal(item) case final HazardSignal signal) signal,
     ];
+  }
+
+  /// Un aviso tal como lo manda el servidor, o null si trae una amenaza que la
+  /// app no conoce (mejor no mostrarlo que mostrarlo mal).
+  static HazardSignal? _signal(Map<String, dynamic> item) {
+    final Hazard? hazard = Hazard.tryParse(item['hazard'] as String?);
+    if (hazard == null) return null;
+    final String? level = item['suggestedLevel'] as String?;
+    return HazardSignal(
+      id: item['id'] as String? ?? '',
+      source: item['source'] as String? ?? '',
+      hazard: hazard,
+      headline: item['headline'] as String? ?? '',
+      detail: item['detail'] as String? ?? '',
+      occurredAt:
+          DateTime.tryParse(item['occurredAt'] as String? ?? '')?.toLocal() ?? DateTime.now(),
+      magnitude: (item['magnitude'] as num?)?.toDouble(),
+      distanceKm: (item['distanceKm'] as num?)?.round(),
+      status: SignalStatus.values.firstWhere(
+        (SignalStatus s) => s.wire == item['status'],
+        orElse: () => SignalStatus.pending,
+      ),
+      suggestedLevel: AlertLevel.values.where((AlertLevel l) => l.wire == level).firstOrNull,
+      needsApproval: item['needsApproval'] == true,
+      // Si el servidor viejo no manda el campo, el aviso automático se puede
+      // emitir como siempre.
+      canEmit: item['canEmit'] as bool? ?? true,
+      reportedBy: item['reportedBy'] as String?,
+      reportedById: item['reportedById'] as String?,
+      approvedBy: item['approvedBy'] as String?,
+      approvedAt: _date(item['approvedAt']),
+      alertId: item['alertId'] as String?,
+    );
+  }
+
+  /// Las fechas de la base vienen como `2026-10-26 14:05:00` en UTC.
+  static DateTime? _date(Object? raw) {
+    if (raw is! String || raw.isEmpty) return null;
+    final String iso = raw.contains('T') ? raw : '${raw.replaceFirst(' ', 'T')}Z';
+    return DateTime.tryParse(iso)?.toLocal();
+  }
+
+  @override
+  Future<HazardSignal> reportHazard(ManualHazardReport report) async {
+    final Map<String, dynamic> raw =
+        await _act(() => _api.post('/hazards/signals', body: report.toJson().cast<String, dynamic>()));
+    final Object? signal = raw['signal'];
+    final HazardSignal? parsed = signal is Map<String, dynamic> ? _signal(signal) : null;
+    if (parsed == null) {
+      throw const PanelActionFailure('El aviso se envió, pero no pudimos confirmarlo. Revisa la lista.');
+    }
+    return parsed;
+  }
+
+  @override
+  Future<HazardSignal> approveSignal(String signalId, {String? note}) async {
+    final Map<String, dynamic> raw = await _act(
+      () => _api.post(
+        '/hazards/signals/${_id(signalId)}/approve',
+        body: <String, dynamic>{if (note != null && note.trim().isNotEmpty) 'note': note.trim()},
+      ),
+    );
+    final Object? signal = raw['signal'];
+    final HazardSignal? parsed = signal is Map<String, dynamic> ? _signal(signal) : null;
+    if (parsed == null) {
+      throw const PanelActionFailure('La aprobación quedó, pero no pudimos confirmarla. Revisa la lista.');
+    }
+    return parsed;
+  }
+
+  @override
+  Future<Alert> issueAlertFromSignal(String signalId, AlertDraft draft) async {
+    final Map<String, dynamic> raw = await _act(
+      () => _api.post(
+        '/hazards/signals/${_id(signalId)}/alert',
+        body: <String, dynamic>{
+          'level': draft.level.wire,
+          'hazard': draft.hazard.wire,
+          'title': draft.title.trim(),
+          'scope': draft.scope.trim(),
+          'instructions': draft.instructions,
+          if (draft.meetingPoint != null && draft.meetingPoint!.isNotEmpty)
+            'meetingPoint': draft.meetingPoint,
+          if (draft.drill) 'drill': true,
+        },
+      ),
+    );
+    final Alert? alert = AlertMapper.parse(raw['alert']);
+    if (alert == null) {
+      // No se finge que salió bien: quien emite tiene que saber que no está
+      // seguro de haber avisado.
+      throw const PanelActionFailure(
+        'El colegio recibió la alerta pero no pudimos confirmarla. Revisa el '
+        'tablero antes de volver a emitirla.',
+      );
+    }
+    return alert;
+  }
+
+  @override
+  Future<HazardWatchOverview> loadHazardWatch() async {
+    final Map<String, dynamic> raw = await _api.get('/hazards/settings');
+    final Map<String, dynamic> location =
+        raw['location'] as Map<String, dynamic>? ?? const <String, dynamic>{};
+    return HazardWatchOverview(
+      settings: _settings(raw['settings']),
+      watching: raw['watching'] != false,
+      place: <String>[
+        if (location['name'] is String) location['name'] as String,
+        if (location['city'] is String) location['city'] as String,
+      ].join(' · '),
+      latitude: (location['latitude'] as num?)?.toDouble(),
+      longitude: (location['longitude'] as num?)?.toDouble(),
+      sources: _list(
+        raw['sources'],
+        (Map<String, dynamic> item) => HazardSourceStatus(
+          key: item['key'] as String? ?? '',
+          label: item['label'] as String? ?? '',
+          enabled: item['enabled'] == true,
+          lastRunAt: _date(item['lastRunAt']),
+          lastOkAt: _date(item['lastOkAt']),
+          lastError: item['lastError'] as String?,
+          lastCount: _int(item['lastCount']),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Future<HazardSettings> saveHazardSettings(HazardSettings settings) async {
+    final Map<String, dynamic> raw = await _act(
+      () => _api.patch('/hazards/settings', body: settings.toJson().cast<String, dynamic>()),
+    );
+    return _settings(raw['settings']);
+  }
+
+  static HazardSettings _settings(Object? raw) {
+    final Map<String, dynamic> s = raw is Map<String, dynamic> ? raw : const <String, dynamic>{};
+    Map<String, dynamic> group(String key) =>
+        s[key] is Map<String, dynamic> ? s[key] as Map<String, dynamic> : const <String, dynamic>{};
+    double n(Map<String, dynamic> g, String key, double fallback) => (g[key] as num?)?.toDouble() ?? fallback;
+
+    final Map<String, dynamic> general = group('general');
+    final Map<String, dynamic> quakes = group('sismos');
+    final Map<String, dynamic> rain = group('lluvia');
+    final Map<String, dynamic> flood = group('creciente');
+    return HazardSettings(
+      pollMinutes: n(general, 'pollMinutes', 5).round(),
+      quakesEnabled: quakes['enabled'] != false,
+      quakeMinMagnitude: n(quakes, 'minMagnitude', 3.5),
+      quakeRadiusKm: n(quakes, 'radiusKm', 300).round(),
+      rainEnabled: rain['enabled'] != false,
+      rainMmNext6h: n(rain, 'mmNext6h', 15),
+      floodEnabled: flood['enabled'] != false,
+      floodRainMm: n(flood, 'rainMm', 60),
+      floodDischargeRatio: n(flood, 'dischargeRatio', 2),
+    );
   }
 
   @override
   Future<void> dismissSignal(String signalId) async {
-    await _api.post('/hazards/signals/$signalId/dismiss');
+    await _act(() => _api.post('/hazards/signals/${_id(signalId)}/dismiss'));
   }
 
   @override

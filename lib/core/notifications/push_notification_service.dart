@@ -252,6 +252,8 @@ Future<void> showAlertNotification(
       PushKind.hijoNecesitaAyuda => 2,
       // Los mensajes van aparte: uno nuevo no debe borrar el aviso de una alerta.
       PushKind.chatMensaje => 3,
+      // Un aviso por revisar no puede borrar el de una alerta en curso.
+      PushKind.avisoAmenaza => 4,
       _ => 1,
     },
     title: notification.title,

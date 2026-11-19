@@ -8,6 +8,7 @@ import '../../../alerts/domain/alert_level.dart';
 import '../../../alerts/domain/hazard.dart';
 import '../../../alerts/domain/meeting_point.dart';
 import '../../../alerts/domain/protocol.dart';
+import '../../../hazards/domain/hazard_alert_defaults.dart';
 import '../../../onboarding/domain/credentials.dart';
 import '../../../onboarding/domain/enrollment.dart';
 import '../../../onboarding/domain/enrollment_failure.dart';
@@ -35,10 +36,15 @@ class WebAlertaScreen extends StatefulWidget {
     this.level,
     this.incidentId,
     this.drillId,
+    this.signalId,
     super.key,
   });
 
   final Session session;
+
+  /// El aviso (de una fuente o de una persona) del que sale esta alerta. Con él,
+  /// el servidor comprueba que tenga su aprobación y lo deja enlazado.
+  final String? signalId;
 
   /// Valores con los que arranca el formulario (una plantilla, un aviso externo).
   final Hazard? hazard;
@@ -112,51 +118,11 @@ class _WebAlertaScreenState extends State<WebAlertaScreen> {
     _message.text = defaultInstructions(_hazard, _level, _protocols).join('\n');
   }
 
-  static List<String> defaultInstructions(Hazard hazard, AlertLevel level, List<Protocol> protocols) {
-    if (level == AlertLevel.roja) {
-      for (final Protocol p in protocols) {
-        if (p.hazard == hazard && p.duringSteps.isNotEmpty) {
-          return <String>[
-            for (final String step in p.duringSteps.take(6))
-              step.length > 120 ? step.substring(0, 120) : step,
-          ];
-        }
-      }
-      return const <String>[
-        'Sal con tu grupo, en fila y sin correr',
-        'No vuelvas por nada',
-        'Ve a tu punto de encuentro',
-      ];
-    }
-    if (level == AlertLevel.naranja) {
-      return const <String>[
-        'Guarda tus cosas',
-        'Ubícate cerca de la puerta con tu grupo',
-        'Espera la indicación de salir',
-      ];
-    }
-    return const <String>[
-      'Mantente atento a las indicaciones de tu docente',
-      'No hace falta salir del salón',
-    ];
-  }
+  static List<String> defaultInstructions(Hazard hazard, AlertLevel level, List<Protocol> protocols) =>
+      HazardAlertDefaults.instructions(hazard, level, protocols);
 
-  static String titleFor(Hazard hazard, AlertLevel level, {bool drill = false}) {
-    if (drill) {
-      return switch (hazard) {
-        Hazard.sismo => 'SIMULACRO DE SISMO',
-        Hazard.incendio => 'SIMULACRO DE INCENDIO',
-        Hazard.inundacion => 'SIMULACRO DE INUNDACIÓN',
-        Hazard.lluvia => 'SIMULACRO DE LLUVIAS',
-      };
-    }
-    return switch (hazard) {
-      Hazard.sismo => level == AlertLevel.roja ? 'SISMO' : 'SISMO REPORTADO',
-      Hazard.incendio => 'INCENDIO',
-      Hazard.inundacion => 'CRECIENTE DE LA QUEBRADA',
-      Hazard.lluvia => 'LLUVIA FUERTE',
-    };
-  }
+  static String titleFor(Hazard hazard, AlertLevel level, {bool drill = false}) =>
+      HazardAlertDefaults.title(hazard, level, drill: drill);
 
   List<String> get _lines => _message.text
       .split('\n')
@@ -218,7 +184,9 @@ class _WebAlertaScreenState extends State<WebAlertaScreen> {
 
     return WebPageFrame(
       title: 'Emitir alerta',
-      subtitle: 'Llega a todos los celulares del colegio en segundos',
+      subtitle: widget.signalId == null
+          ? 'Llega a todos los celulares del colegio en segundos'
+          : 'A partir de un aviso revisado · llega a todos los celulares en segundos',
       actions: const <Widget>[WebChip('Revisa antes de enviar: no se puede deshacer', tone: WebChipTone.warn)],
       children: <Widget>[
         WebSplit(
@@ -304,7 +272,12 @@ class _WebAlertaScreenState extends State<WebAlertaScreen> {
                       onPressed: problem != null
                           ? null
                           : () => WebNav.of(context).open(
-                                WebAlertaConfirmScreen(session: widget.session, draft: _draft(), reach: _reach),
+                                WebAlertaConfirmScreen(
+                                  session: widget.session,
+                                  draft: _draft(),
+                                  reach: _reach,
+                                  signalId: widget.signalId,
+                                ),
                               ),
                     ),
                   ),
@@ -484,11 +457,18 @@ class _PhonePreview extends StatelessWidget {
 /// «¿Enviar esta alerta real?»: repite lo que se va a enviar y pide la
 /// contraseña, porque emitir una alerta no se puede deshacer.
 class WebAlertaConfirmScreen extends StatefulWidget {
-  const WebAlertaConfirmScreen({required this.session, required this.draft, this.reach, super.key});
+  const WebAlertaConfirmScreen({
+    required this.session,
+    required this.draft,
+    this.reach,
+    this.signalId,
+    super.key,
+  });
 
   final Session session;
   final AlertDraft draft;
   final int? reach;
+  final String? signalId;
 
   @override
   State<WebAlertaConfirmScreen> createState() => _WebAlertaConfirmScreenState();
@@ -528,11 +508,16 @@ class _WebAlertaConfirmScreenState extends State<WebAlertaConfirmScreen> {
       final Session fresh = await scope.credentialsRepository.signIn(credentials);
       await scope.sessionStore.save(fresh);
 
-      final Alert alert = await scope.teacherRepository!.issueAlert(widget.draft);
+      final String? signalId = widget.signalId;
+      final Alert alert = signalId == null
+          ? await scope.teacherRepository!.issueAlert(widget.draft)
+          : await scope.panelRepository!.issueAlertFromSignal(signalId, widget.draft);
       ErrorReporter.trace('alerta ${alert.level.wire} emitida', context: 'panel web');
       nav.refreshBadges();
       nav.open(WebAlertaSentScreen(alert: alert));
     } on EnrollmentFailure catch (failure) {
+      if (mounted) setState(() => _error = failure.message);
+    } on PanelActionFailure catch (failure) {
       if (mounted) setState(() => _error = failure.message);
     } catch (error, stack) {
       ErrorReporter.report(error, stack, context: 'emitir alerta (panel web)');

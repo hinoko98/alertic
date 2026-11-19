@@ -10,6 +10,10 @@ enum PushKind {
   /// coordinación, que deciden si se convierte en alerta.
   reporteEmergencia(wire: 'reporte_emergencia'),
 
+  /// Un aviso de amenaza (un sismo, una creciente o un incendio reportado) que
+  /// un docente o coordinación debe revisar. No es una alerta: pide una decisión.
+  avisoAmenaza(wire: 'aviso_amenaza'),
+
   /// Un mensaje del chat con el colegio, o la confirmación automática de que el
   /// suyo llegó. El aviso no lleva el texto: dice que hay algo y la app lo pide.
   chatMensaje(wire: 'chat_mensaje');

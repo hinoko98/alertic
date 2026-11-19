@@ -1,11 +1,14 @@
 import 'fake_alert_repository.dart';
 import 'package:alertic/features/alerts/domain/alert.dart';
+import 'package:alertic/features/alerts/domain/alert_level.dart';
 import 'package:alertic/features/alerts/domain/hazard.dart';
 import 'package:alertic/features/alerts/domain/meeting_point.dart';
 import 'package:alertic/features/alerts/domain/protocol.dart';
 import 'package:alertic/features/panel/domain/community_admin.dart';
 import 'package:alertic/features/panel/domain/group_name.dart';
+import 'package:alertic/features/panel/domain/hazard_watch.dart';
 import 'package:alertic/features/panel/domain/panel_repository.dart';
+import 'package:alertic/features/teacher/domain/teacher_repository.dart';
 
 /// Datos de prueba del panel, con las cifras del diseño.
 ///
@@ -134,36 +137,175 @@ class FakePanelRepository implements PanelRepository {
     );
   }
 
-  @override
-  Future<List<HazardSignal>> loadSignals() async {
-    await Future<void>.delayed(latency);
+  /// Quién «tiene la sesión» en el doble: decide si puede aprobar un aviso.
+  String currentPersonId = 'admin-1';
 
-    return <HazardSignal>[
-      HazardSignal(
-        id: 'demo-usgs',
-        source: 'USGS',
-        hazard: Hazard.sismo,
-        headline: 'Sismo M4.2 a 86 km',
-        detail: '18 km al noreste de Los Santos, Santander',
-        magnitude: 4.2,
-        distanceKm: 86,
-        occurredAt: DateTime.now().subtract(const Duration(minutes: 4)),
-      ),
-      HazardSignal(
-        id: 'demo-meteo',
-        source: 'Open-Meteo',
-        hazard: Hazard.lluvia,
-        headline: 'Lluvia fuerte: 34 mm en las próximas 6 horas',
-        detail: 'Pico de 12 mm/h. Revisar el nivel de la quebrada.',
-        occurredAt: DateTime.now().subtract(const Duration(minutes: 20)),
-      ),
-    ].where((HazardSignal signal) => !_dismissed.contains(signal.id)).toList();
+  late final List<HazardSignal> _signals = <HazardSignal>[
+    HazardSignal(
+      id: 'demo-usgs',
+      source: 'USGS',
+      hazard: Hazard.sismo,
+      headline: 'Sismo M4.2 a 86 km',
+      detail: '18 km al noreste de Los Santos, Santander',
+      magnitude: 4.2,
+      distanceKm: 86,
+      suggestedLevel: AlertLevel.naranja,
+      occurredAt: DateTime.now().subtract(const Duration(minutes: 4)),
+    ),
+    HazardSignal(
+      id: 'demo-meteo',
+      source: 'Open-Meteo',
+      hazard: Hazard.lluvia,
+      headline: 'Lluvia fuerte: 34 mm en las próximas 6 horas',
+      detail: 'Pico de 12 mm/h. Revisar el nivel de la quebrada.',
+      suggestedLevel: AlertLevel.amarilla,
+      occurredAt: DateTime.now().subtract(const Duration(minutes: 20)),
+    ),
+  ];
+
+  HazardSettings _settings = const HazardSettings(
+    pollMinutes: 5,
+    quakesEnabled: true,
+    quakeMinMagnitude: 3.5,
+    quakeRadiusKm: 300,
+    rainEnabled: true,
+    rainMmNext6h: 15,
+    floodEnabled: true,
+    floodRainMm: 60,
+    floodDischargeRatio: 2,
+  );
+
+  @override
+  Future<List<HazardSignal>> loadSignals({SignalStatus status = SignalStatus.pending}) async {
+    await Future<void>.delayed(latency);
+    return _signals
+        .where((HazardSignal signal) => (_dismissed.contains(signal.id) ? SignalStatus.dismissed : signal.status) == status)
+        .toList();
   }
 
   @override
   Future<void> dismissSignal(String signalId) async {
     await Future<void>.delayed(latency);
     _dismissed.add(signalId);
+  }
+
+  HazardSignal _copy(
+    HazardSignal s, {
+    SignalStatus? status,
+    String? approvedBy,
+    String? alertId,
+  }) {
+    final String? approver = approvedBy ?? s.approvedBy;
+    final SignalStatus next = status ?? s.status;
+    return HazardSignal(
+      id: s.id,
+      source: s.source,
+      hazard: s.hazard,
+      headline: s.headline,
+      detail: s.detail,
+      occurredAt: s.occurredAt,
+      magnitude: s.magnitude,
+      distanceKm: s.distanceKm,
+      status: next,
+      suggestedLevel: s.suggestedLevel,
+      needsApproval: s.needsApproval,
+      canEmit: next == SignalStatus.pending && (!s.needsApproval || approver != null),
+      reportedBy: s.reportedBy,
+      reportedById: s.reportedById,
+      approvedBy: approver,
+      approvedAt: approvedBy != null ? DateTime.now() : s.approvedAt,
+      alertId: alertId ?? s.alertId,
+    );
+  }
+
+  int _findSignal(String id) {
+    final int index = _signals.indexWhere((HazardSignal s) => s.id == id);
+    if (index < 0) throw const PanelActionFailure('Ese aviso no existe.');
+    return index;
+  }
+
+  @override
+  Future<HazardSignal> reportHazard(ManualHazardReport report) async {
+    await Future<void>.delayed(latency);
+    final HazardSignal signal = HazardSignal(
+      id: 'manual-${_signals.length + 1}',
+      source: 'Reporte manual',
+      hazard: report.hazard,
+      headline: report.headline ?? 'Posible incendio reportado',
+      detail: report.detail,
+      occurredAt: DateTime.now(),
+      suggestedLevel: report.suggestedLevel ?? AlertLevel.roja,
+      needsApproval: true,
+      canEmit: false,
+      reportedBy: 'Quien tiene la sesión',
+      reportedById: currentPersonId,
+    );
+    _signals.insert(0, signal);
+    return signal;
+  }
+
+  @override
+  Future<HazardSignal> approveSignal(String signalId, {String? note}) async {
+    await Future<void>.delayed(latency);
+    final int index = _findSignal(signalId);
+    final HazardSignal s = _signals[index];
+    if (!s.needsApproval) {
+      throw const PanelActionFailure('Ese aviso viene de una fuente automática y no necesita aprobación.');
+    }
+    if (s.reportedById == currentPersonId) {
+      throw const PanelActionFailure('No puedes aprobar tu propio aviso: tiene que hacerlo otra persona.');
+    }
+    return _signals[index] = _copy(s, approvedBy: 'Otra persona');
+  }
+
+  @override
+  Future<Alert> issueAlertFromSignal(String signalId, AlertDraft draft) async {
+    await Future<void>.delayed(latency);
+    final int index = _findSignal(signalId);
+    if (!_signals[index].canEmit || _dismissed.contains(signalId)) {
+      throw const PanelActionFailure('Este aviso necesita la aprobación de otra persona antes de enviarse.');
+    }
+    final Alert alert = Alert.validated(
+      id: 'alerta-$signalId',
+      level: draft.level,
+      hazard: draft.hazard,
+      title: draft.title,
+      scope: draft.scope,
+      instructions: draft.instructions,
+      issuedAt: DateTime.now(),
+      meetingPoint: draft.meetingPoint,
+    );
+    _signals[index] = _copy(_signals[index], status: SignalStatus.attended, alertId: alert.id);
+    return alert;
+  }
+
+  @override
+  Future<HazardWatchOverview> loadHazardWatch() async {
+    await Future<void>.delayed(latency);
+    return HazardWatchOverview(
+      settings: _settings,
+      watching: true,
+      place: 'Instituto Integrado de Comercio · Barbosa, Santander',
+      latitude: 5.9337,
+      longitude: -73.6216,
+      sources: <HazardSourceStatus>[
+        HazardSourceStatus(key: 'sismos', label: 'Sismos (USGS)', enabled: _settings.quakesEnabled, lastRunAt: DateTime.now(), lastOkAt: DateTime.now(), lastCount: 1),
+        HazardSourceStatus(key: 'lluvia', label: 'Lluvia fuerte (Open-Meteo)', enabled: _settings.rainEnabled, lastRunAt: DateTime.now(), lastOkAt: DateTime.now(), lastCount: 1),
+        HazardSourceStatus(
+          key: 'creciente',
+          label: 'Creciente súbita o avalancha (Open-Meteo)',
+          enabled: _settings.floodEnabled,
+          lastRunAt: DateTime.now(),
+          lastError: 'Open-Meteo respondió 503',
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<HazardSettings> saveHazardSettings(HazardSettings settings) async {
+    await Future<void>.delayed(latency);
+    return _settings = settings;
   }
 
   @override

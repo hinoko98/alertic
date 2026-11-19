@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../core/errors/error_reporter.dart';
+import '../core/session/user_role.dart';
 import '../features/alerts/domain/live_updates.dart';
 import '../features/alerts/presentation/widgets/alert_gate.dart';
+import '../features/hazards/presentation/hazard_review_screen.dart';
 import '../features/session/domain/session.dart';
 import '../shared/design/app_bottom_nav.dart';
 import 'app_scope.dart';
@@ -105,11 +107,22 @@ class _AppShellState extends State<AppShell> {
         refreshChatUnread: _refreshChatUnread,
         schoolName: _schoolName,
         child: Scaffold(
-          body: IndexedStack(
-            index: _index,
+          body: Column(
             children: <Widget>[
-              for (final AppDestination destination in _destinations)
-                Builder(builder: destination.builder),
+              // Quien puede decidir un aviso de amenaza lo ve en cualquier
+              // pestaña: un sismo no espera a que abra la pantalla correcta.
+              if (widget.session.role == UserRole.docente ||
+                  widget.session.role == UserRole.administrador)
+                const HazardReviewBanner(),
+              Expanded(
+                child: IndexedStack(
+                  index: _index,
+                  children: <Widget>[
+                    for (final AppDestination destination in _destinations)
+                      Builder(builder: destination.builder),
+                  ],
+                ),
+              ),
             ],
           ),
           bottomNavigationBar: _destinations.length < 2

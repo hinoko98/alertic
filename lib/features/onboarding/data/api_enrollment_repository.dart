@@ -60,8 +60,7 @@ class ApiEnrollmentRepository implements EnrollmentRepository {
     return Session(
       token: token,
       profile: ProfileMapper.map(response['profile'], code: code),
-      // TODO(sesión): que el servidor mande el vencimiento en la respuesta, en
-      // vez de suponerlo aquí a partir de lo que dura el token.
+       // vez de suponerlo aquí a partir de lo que dura el token.
       expiresAt: DateTime.now().add(const Duration(hours: 12)),
     );
   }

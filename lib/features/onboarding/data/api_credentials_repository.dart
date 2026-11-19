@@ -45,7 +45,6 @@ class ApiCredentialsRepository implements CredentialsRepository {
     return Session(
       token: token,
       profile: ProfileMapper.map(response['profile']),
-      // TODO(sesión): que el servidor mande el vencimiento en la respuesta, en
       // vez de suponerlo aquí a partir de lo que dura el token.
       expiresAt: DateTime.now().add(const Duration(hours: 12)),
     );

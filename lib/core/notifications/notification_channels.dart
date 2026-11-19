@@ -28,7 +28,8 @@ abstract final class NotificationChannels {
     if (notification.kind == PushKind.hijoNecesitaAyuda) {
       return personal;
     }
-    if (notification.kind == PushKind.reporteEmergencia) {
+    if (notification.kind == PushKind.reporteEmergencia ||
+        notification.kind == PushKind.avisoAmenaza) {
       return reports;
     }
     if (notification.kind == PushKind.chatMensaje) {

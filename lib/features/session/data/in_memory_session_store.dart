@@ -7,7 +7,6 @@ import '../domain/session_store.dart';
 /// pedir el código otra vez que escribir un token en un almacenamiento sin
 /// cifrar.
 ///
-/// TODO(sesión): reemplazar por una implementación con `flutter_secure_storage`
 /// cuando exista el backend, y agregar el borrado de la sesión cuando el
 /// servidor responda 401.
 class InMemorySessionStore implements SessionStore {
